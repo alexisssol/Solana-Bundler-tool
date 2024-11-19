@@ -4,7 +4,7 @@
 	"description": "https://t.me/benorizz0",
 	"main": "index.js",
 	"scripts": {
-		"start": "ts-node jitoPool.ts"
+		"start": "ts-node src/jitoPool.ts"
 	},
 	"author": "https://t.me/benorizz0/",
 	"license": "ISC",
