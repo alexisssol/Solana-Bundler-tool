@@ -1,7 +1,7 @@
 import { Keypair, PublicKey, SystemProgram, TransactionInstruction, VersionedTransaction, LAMPORTS_PER_SOL, TransactionMessage, Blockhash } from '@solana/web3.js';
 import { loadKeypairs } from './createKeys';
 import { calculateTokensBoughtPercentage } from './computeLPO';
-import { wallet, connection, tipAcct, payer } from '../config';
+import { wallet, connection, tipAcct, payer } from './config/AppConfig';
 import * as spl from '@solana/spl-token';
 import { searcherClient } from "./clients/jito";
 import { Bundle as JitoBundle } from 'jito-ts/dist/sdk/block-engine/types.js';

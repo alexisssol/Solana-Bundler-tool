@@ -1,7 +1,7 @@
 import { AddressLookupTableProgram, Keypair, PublicKey, VersionedTransaction, TransactionMessage, TransactionInstruction, SystemProgram, LAMPORTS_PER_SOL, Blockhash, AddressLookupTableAccount } from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
-import { wallet, connection, walletconn, RayLiqPoolv4, tipAcct, payer } from '../config';
+import { wallet, connection, walletconn, RayLiqPoolv4, tipAcct, payer } from './config/AppConfig';
 import promptSync from 'prompt-sync';
 import { searcherClient } from "./clients/jito";
 import { Bundle as JitoBundle } from 'jito-ts/dist/sdk/block-engine/types.js';

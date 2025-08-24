@@ -22,7 +22,7 @@ import {
     connection,
     wallet,
     tipAcct
-  } from '../config';
+  } from './config/AppConfig';
   import { BN } from "@project-serum/anchor";
   import promptSync from 'prompt-sync';
   import { sendBundle } from './jitoPool';

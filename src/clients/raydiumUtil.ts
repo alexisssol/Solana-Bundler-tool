@@ -25,7 +25,7 @@ import {
   makeTxVersion,
   PROGRAMIDS, 
 } from './constants';
-import { connection, wallet, walletconn } from '../../config';
+import { connection, wallet, walletconn } from '../config/AppConfig';
 import { BN } from '@project-serum/anchor';
  
 const ZERO = new BN(0)

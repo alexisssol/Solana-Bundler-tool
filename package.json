@@ -1,10 +1,18 @@
 {
-	"name": "Solana-Bundler",
+	"name": "Solana-Jito-Bundler",
 	"version": "1.0.0",
 	"description": "https://t.me/benorizz0",
 	"main": "index.js",
 	"scripts": {
-		"start": "ts-node src/jitoPool.ts"
+		"start": "ts-node main.ts",
+        "start:pool": "ts-node src/jitoPool.ts",
+        "setup": "ts-node scripts/setup.ts setup",
+        "validate-config": "ts-node scripts/setup.ts validate",
+        "migrate-keypairs": "ts-node -e \"require('./src/createKeys').createKeypairs()\"",
+        "build": "tsc",
+        "clean": "rm -rf build dist",
+        "dev": "nodemon --exec ts-node main.ts",
+        "dev:watch": "nodemon --watch src --ext ts --exec ts-node main.ts"
 	},
 	"author": "https://t.me/benorizz0/",
 	"license": "ISC",
@@ -16,7 +24,7 @@
 		"@project-serum/serum": "^0.13.65",
 		"@raydium-io/raydium-sdk": "^1.3.1-beta.47",
 		"@solana/spl-token": "^0.3.9",
-		"@solana/web3.js": "^1.87.6",
+		"@solana/web3.js": "^1.96.0",
 		"@types/node": "^20.10.5",
 		"axios": "^1.6.8",
 		"bn.js": "^5.2.1",
@@ -26,12 +34,13 @@
 		"fs": "^0.0.1-security",
 		"http": "^0.0.1-security",
 		"https": "^1.0.0",
-		"jito-ts": "^3.0.1",
+		"jito-ts": "^4.2.0",
 		"mime": "^4.0.1",
 		"node-fetch": "^3.3.2",
 		"path": "^0.12.7",
 		"prompt-sync": "^4.2.0",
 		"protobufjs": "^7.2.6",
+		"ts-node": "^10.9.2",
 		"typescript": "^5.3.3"
 	},
 	"devDependencies": {
@@ -39,6 +48,7 @@
 		"@types/convict": "^6.1.6",
 		"@types/node-fetch": "^2.6.9",
 		"@types/prompt-sync": "^4.2.3",
-		"javascript-obfuscator": "^4.1.0"
+		"javascript-obfuscator": "^4.1.0",
+		"nodemon": "^3.1.10"
 	}
 }

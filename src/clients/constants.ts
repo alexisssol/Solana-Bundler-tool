@@ -1,8 +1,6 @@
 import { PublicKey, Signer, Transaction } from "@solana/web3.js"
 import {
   ENDPOINT as _ENDPOINT,
-  Currency,
-  DEVNET_PROGRAM_ID,
   LOOKUP_TABLE_CACHE,
   MAINNET_PROGRAM_ID,
   RAYDIUM_MAINNET,
@@ -10,10 +8,6 @@ import {
   TOKEN_PROGRAM_ID,
   TxVersion,
 } from '@raydium-io/raydium-sdk';
-import {
-  Connection,
-  Keypair, 
-} from '@solana/web3.js'; 
 
 export const SUPPORTED_CHAINS = [
     {

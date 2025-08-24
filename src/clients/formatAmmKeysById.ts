@@ -10,7 +10,7 @@ import {
   PublicKey
 } from '@solana/web3.js';
 
-import { connection } from '../../config';
+import { connection } from '../config/AppConfig';
 
 export async function formatAmmKeysById(id: string): Promise<ApiPoolInfoV4> {
   const account = await connection.getAccountInfo(new PublicKey(id))

@@ -1,55 +1,192 @@
-# Solana-Bundler-tool
- The Solana Bundler is a powerful open-source script designed to simplify buying and selling operations across 27 wallets simultaneously on the Solana blockchain. This innovative tool streamlines multi-transaction management, delivering efficiency and reliability for users handling high-volume activities
+# 🚀 Solana Bundler Tool - Secure Edition
 
-## Initial Setup
+A comprehensive Solana DeFi tool for token bundling, liquidity operations, and market creation with enhanced security features.
 
-To utilize the Solana Raydium Bundler efficiently, please adhere to the following setup and execution guidelines.
- 
-### Step 1: Configuration
+## 🔧 Quick Start
 
-- **Edit the `.env` File:** Before executing the script, configuring the `.env` file is essential. You will need two keypairs:
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-  - **SOL Distribution Fees Keypair:** This keypair handles the payment of all SOL distribution fees.
-  - **Pool Creation Keypair:** This keypair facilitates pool creation. For security, ensure these keypairs are distinct.
+### 2. Environment Setup
+Run the interactive setup to configure your environment:
+```bash
+npm run setup
+```
 
-  While testing the script, you can employ the same keypair for both purposes. Always store these keypairs securely. 
+This will create a `.env` file with your configuration. You can also manually copy `.env.example` to `.env` and fill in your values.
 
-### Step 2: Execution of Functions
- 
-**Note:** To maintain error-free execution, it is vital to perform these steps sequentially. 
+### 3. Validate Configuration
+```bash
+npm run validate-config
+```
 
-- **Create Keypairs (Step 1):** Even though not mandatory for every launch, it is advisable to create new keypairs initially or during resets to assure no SOL remains in the wallets.
+### 4. Run the Tool
+```bash
+npm start
+```
 
-- **Premarket (Step 2):** This multi-step process must follow a specific sequence:
+## 🔐 Security Features
 
-  1. **Execution Sequence:** Complete steps 2 through 6 sequentially.
-  2. **Bundle ID Validation:** After each step, confirm the Bundle ID to ensure successful landing.
-  3. **Repeat if Necessary:** If landing fails, elevate the tip and attempt again. Exit if required.
-  4. **Cross-Verification:** Utilize the Jito Block Explorer to verify bundle landing. Disregard the "Landed - no" indication; ensure the first transaction is confirmed.
+### Environment Variables
+All sensitive data is now stored in environment variables:
+- **Private Keys**: Base58 encoded and loaded from `.env`
+- **RPC URLs**: Configurable for different networks
+- **Jito Configuration**: All endpoints and tokens externalized
 
-- **Create Pool (Step 3):** Pool creation may warrant multiple attempts:
+### Encrypted Keypair Storage
+- **AES Encryption**: Keypairs can be encrypted at rest
+- **Password Protection**: Optional encryption password
+- **Migration Tool**: Migrate existing unencrypted keypairs
 
-  - Use function spamming if initial attempts fail to land the pool creation.
-  - Enhance the tip, with 0.1 SOL or higher recommended for improved landing chances.
+### Key Management
+```bash
+# Create or manage keypairs
+npm run migrate-keypairs
+```
 
-- **Selling Options (Steps 4 and 5):**
+## 📁 Configuration Files
 
-  1. **Simultaneous Keypair Sale (Step 4):** Consolidate the sale of all keypairs and reclaim WSOL in Premarket's Step 7 post-rugging.
-  2. **Percentage-Based Selling (Step 5):** Execute sales of varying percentages upon request by transferring specific portions of each keypair's token balance to the fee payers before executing a singular bundle sale.
+### `.env` File Structure
+```env
+# Solana Configuration
+RPC_URL=https://api.mainnet-beta.solana.com
+POOL_CREATOR_PRIVATE_KEY=your_base58_private_key
+FEE_PAYER_PRIVATE_KEY=your_base58_private_key
 
-- **Liquidity Pool Removal (Step 6):** The process for removing LP is direct:
-  - **Non-Burn Removal:** Without LP burning, it will automatically be removed.
+# Jito Configuration
+TIP_ACCOUNT=Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY
+MIN_TIP_LAMPORTS=10000
+TIP_PERCENT=50
 
-## Tips and Troubleshooting
+# Security
+KEYPAIRS_ENCRYPTION_PASSWORD=your_encryption_password
+```
 
-- **Bundle Success:** Adapt the tip or retry the operation if the bundle doesn't land. Jito Block Explorer serves as a verification tool.
-- **Keypair Security:** Ensure keypairs are secure and correctly entered in the `.env` file.
-- **Prudent Function Spamming:** Monitor transactions vigilantly to prevent unnecessary SOL expenditure during spam attempts.
+### Environment Files
+- `.env.example` - Template with documentation
+- `.env.production` - Production configuration template
 
-### Final Thoughts
+## 🏗️ Architecture
 
-The Solana Raydium Bundler offers a sophisticated solution for handling multiple transactions on the Solana blockchain. Adhering to the outlined setup and functions will enable smooth buying and selling processes. Engage with our Discord community to explore the strengths of this open-source tool further.
+```
+┌─────────────────────────────────────────┐
+│              User Interface             │
+├─────────────────────────────────────────┤
+│           src/config/AppConfig          │  ← Centralized Configuration
+├─────────────────────────────────────────┤
+│      src/config/SecureKeypairManager    │  ← Encrypted Key Management
+├─────────────────────────────────────────┤
+│              Core Modules               │
+│  ┌─────────────┬─────────────────────┐  │
+│  │ jitoPool.ts │ Main Entry Point    │  │
+│  ├─────────────┼─────────────────────┤  │
+│  │ buyToken.ts │ Token Purchase      │  │
+│  │ sellFunc.ts │ Token Sales         │  │
+│  │ removeLiq.ts│ Liquidity Removal   │  │
+│  │ createMarket│ Market Creation     │  │
+│  │ createLUT.ts│ Lookup Tables       │  │
+│  └─────────────┴─────────────────────┘  │
+├─────────────────────────────────────────┤
+│              Client Layer               │
+│       (Jito, Raydium, OpenBook)        │
+├─────────────────────────────────────────┤
+│             Solana Network              │
+└─────────────────────────────────────────┘
+```
 
-Start optimizing your Solana transactions with the Solana Raydium Bundler today!
+## 🛠️ Available Scripts
 
-For technical queries, feel free to reach out via tg @ilertha.
+| Script | Description |
+|--------|-------------|
+| `npm start` | Start the main application |
+| `npm run setup` | Interactive environment setup |
+| `npm run validate-config` | Validate configuration |
+| `npm run migrate-keypairs` | Manage keypairs (create/migrate) |
+| `npm run build` | Build TypeScript |
+| `npm run dev` | Development mode with watch |
+
+## 📊 Features
+
+### Core Functionality
+- **Token Bundling**: Efficient token purchase/sale bundling across 27 wallets
+- **Liquidity Operations**: Add/remove liquidity from pools
+- **Market Creation**: Create new OpenBook markets
+- **Jito Integration**: MEV protection and priority fees
+
+### Security Enhancements
+- **Environment Variables**: No hardcoded secrets
+- **Encrypted Storage**: Optional keypair encryption
+- **Secure Configuration**: Centralized config management
+- **Git Safety**: Comprehensive .gitignore
+
+### Developer Experience
+- **Interactive Setup**: Easy initial configuration
+- **Configuration Validation**: Verify setup before running
+- **Migration Tools**: Upgrade existing installations
+- **TypeScript**: Full type safety
+
+## ⚠️ Security Best Practices
+
+1. **Never commit `.env` files** to version control
+2. **Use different keypairs** for mainnet vs devnet
+3. **Enable encryption** for keypair storage
+4. **Use premium RPC** endpoints for production
+5. **Regular backups** of encrypted keypairs
+6. **Monitor wallet balances** for unauthorized activity
+
+## 🔄 Migration from Legacy Version
+
+If upgrading from the old version:
+
+1. Run the setup script: `npm run setup`
+2. Migrate existing keypairs: `npm run migrate-keypairs`
+3. Choose option 'm' to migrate to encrypted storage
+4. Update any custom scripts to use the new config
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Missing required environment variables"**
+- Run `npm run setup` to configure your environment
+- Ensure all required variables are set in `.env`
+
+**"Invalid private key format"**
+- Verify private keys are Base58 encoded
+- Use the setup script to generate new keys
+
+**"Keypair file not found"**
+- Run `npm run migrate-keypairs` to create keypairs
+- Check the `src/keypairs/` directory exists
+
+### Configuration Validation
+```bash
+npm run validate-config
+```
+
+## 🤝 Contributing
+
+When contributing:
+1. Never commit real private keys or `.env` files
+2. Use the `.env.example` template for documentation
+3. Test with devnet before mainnet
+4. Follow the existing TypeScript patterns
+
+## 📄 License
+
+ISC License
+
+## ⚡ Support
+
+For issues and questions:
+- Check the troubleshooting section
+- Validate your configuration with `npm run validate-config`
+- Ensure all dependencies are installed with `npm install`
+
+For technical queries, reach out via tg @ilertha.
+
+---
+
+**⚠️ DISCLAIMER**: This tool handles real cryptocurrency transactions. Always test on devnet first and never risk more than you can afford to lose.

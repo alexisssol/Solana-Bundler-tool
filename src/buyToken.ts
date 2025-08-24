@@ -1,14 +1,7 @@
-import { connection, wallet, walletconn, RayLiqPoolv4, tipAcct } from "../config";
-import { PublicKey, ComputeBudgetProgram, VersionedTransaction,  TransactionInstruction, TransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL, AddressLookupTableAccount } from '@solana/web3.js';
-import { DEFAULT_TOKEN, LP_MINT_ASSOCIATED_SEED, PROGRAMIDS, addLookupTableInfo, makeTxVersion } from './clients/constants';
-import { TOKEN_PROGRAM_ID, getMint } from '@solana/spl-token';
-import { Liquidity, MARKET_STATE_LAYOUT_V3, Token, TokenAmount, simulateTransaction, Market, MAINNET_PROGRAM_ID } from "@raydium-io/raydium-sdk";
-import { BN, LangErrorCode, Wallet } from "@project-serum/anchor";
-import { ammCreatePool, getWalletTokenAccount } from "./clients/raydiumUtil";
+import { connection, wallet, tipAcct } from "./config/AppConfig";
+import { PublicKey, VersionedTransaction,  TransactionInstruction, TransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL, AddressLookupTableAccount } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { loadKeypairs } from './createKeys';
-import { lookupTableProvider } from "./clients/LookupTableProvider";
-//import { getRandomTipAccount } from "./clients/config";
-import NodeWallet from "@project-serum/anchor/dist/cjs/nodewallet";
 import { searcherClient } from "./clients/jito";
 import { Bundle as JitoBundle } from 'jito-ts/dist/sdk/block-engine/types.js';
 import promptSync from 'prompt-sync';
@@ -18,6 +11,7 @@ import { derivePoolKeys } from "./clients/poolKeysReassigned";
 import path from 'path';
 import fs from 'fs';
 import { Key } from "readline";
+import { MAINNET_PROGRAM_ID } from "@raydium-io/raydium-sdk";
 
 const prompt = promptSync();
 const keyInfoPath = path.join(__dirname, 'keyInfo.json');

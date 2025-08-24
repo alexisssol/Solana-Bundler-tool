@@ -1,4 +1,4 @@
-import { connection, wallet, walletconn, tipAcct, payer } from "../config";
+import { connection, wallet, walletconn, tipAcct, payer } from "./config/AppConfig";
 import { PublicKey, VersionedTransaction, TransactionInstruction, TransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL, AddressLookupTableAccount } from "@solana/web3.js";
 import { DEFAULT_TOKEN, PROGRAMIDS } from "./clients/constants";
 import { TOKEN_PROGRAM_ID, getMint } from "@solana/spl-token";
@@ -232,7 +232,7 @@ async function createWalletSwaps(marketID: PublicKey, blockhash: string, keypair
 		}
 
 		const message = new TransactionMessage({
-			payerKey: keypair.publicKey,
+			payerKey: wallet.publicKey,
 			recentBlockhash: blockhash,
 			instructions: instructionsForChunk,
 		}).compileToV0Message([lut]);

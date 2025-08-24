@@ -1,4 +1,4 @@
-import { connection, tipAcct, payer, rpc } from "../config";
+import { connection, tipAcct, payer, rpc } from "./config/AppConfig";
 import { PublicKey, VersionedTransaction, SYSVAR_RENT_PUBKEY, TransactionInstruction, TransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { MAINNET_PROGRAM_ID } from "@raydium-io/raydium-sdk";

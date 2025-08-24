@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
-import * as readline from 'readline';
-import { BN } from 'bn.js';
 import {
   jsonInfo2PoolKeys,
   Liquidity,
@@ -38,7 +36,7 @@ import {
   connection,
   wallet,
   tipAcct
-} from '../config';
+} from './config/AppConfig';
 import { formatAmmKeysById } from './clients/formatAmmKeysById';
 import { derivePoolKeys } from "./clients/poolKeysReassigned"; 
 import promptSync from 'prompt-sync';
