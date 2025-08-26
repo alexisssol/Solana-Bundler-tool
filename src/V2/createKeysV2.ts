@@ -28,7 +28,7 @@ if (!fs.existsSync(keypairsDir)) {
 }
 
 // Generate wallets using Solana Kit V2
-async function generateWalletsV2(numOfWallets: number): Promise<KeyPairSigner[]> {
+export async function generateWalletsV2(numOfWallets: number): Promise<KeyPairSigner[]> {
   const wallets: KeyPairSigner[] = [];
   
   console.log(`🔑 Generating ${numOfWallets} Solana Kit V2 keypairs...`);
@@ -107,13 +107,13 @@ export async function createKeypairWithBase64Enhanced(): Promise<{
   address: Address;
   privateKeyBytes: Uint8Array;
 }> {
-  // Generate 64 random bytes for the private key
-  const privateKeyBytes = new Uint8Array(64);
-  crypto.getRandomValues(privateKeyBytes);
+  // Generate keypair using Solana Kit's method
+  const signer = await generateKeyPairSigner();
   
-  // Create signer from these bytes
-  const signer = await createKeyPairSignerFromBytes(privateKeyBytes);
-  const privateKeyBase64 = Buffer.from(privateKeyBytes).toString('base64');
+  // Try to extract the private key bytes (this is the tricky part with Solana Kit V2)
+  // For now, we'll need to work around the extraction limitation
+  const privateKeyBase64 = await extractPrivateKeyAsBase64(signer);
+  const privateKeyBytes = new Uint8Array(Buffer.from(privateKeyBase64, 'base64'));
   
   return {
     signer,

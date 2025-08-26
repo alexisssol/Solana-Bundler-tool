@@ -13,6 +13,7 @@ payer.json
 # Keypair files
 src/keypairs/
 src/keyInfo.json
+keypairs/
 
 # Node modules
 node_modules/
