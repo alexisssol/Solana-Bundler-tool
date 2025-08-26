@@ -35,14 +35,33 @@ import { getTransferSolInstruction } from '@solana-program/system';
 ## Migration Progress Status
 
 ### ✅ COMPLETED
+
 - **Analysis of current codebase**
 - **Understanding of Solana Kit architecture**
+- **Created `src/config/AppConfigV2.ts`** - V2 configuration with Solana Kit RPC and signers
+- **Created `src/V2/createKeysV2.ts`** - V2 keypair management with base64 encoding
+- **Created `src/config/SecureKeypairManagerV2.ts`** - V2 secure keypair storage
+- **Created `src/V2/jitoPoolV2.ts`** - V2 pool creation and bundle management (with compatibility layer)
 
-### 🔄 IN PROGRESS  
+### 🔄 IN PROGRESS
+
 - **Migration planning and strategy**
+- **Transaction handling V2 implementation**
+
+### ⚠️ KNOWN LIMITATIONS IN CURRENT V2 IMPLEMENTATION
+
+- **Compatibility Layer Required**: The `jitoPoolV2.ts` currently uses a compatibility layer to work with existing Raydium SDK and Jito libraries that expect legacy Web3.js types
+- **KeyPairSigner Conversion**: Need to implement proper conversion between Solana Kit V2 `KeyPairSigner` and legacy `Keypair` for existing library compatibility
+- **Token Balance Fetching**: Token balance fetching needs to be fully migrated to use `@solana-program/token` when available
+- **Transaction Signing**: Some transaction signing still relies on legacy patterns due to library dependencies
 
 ### ⏳ PENDING
-- **All files require migration to Solana Kit**
+
+- **Trading function V2 files** (`sellFuncV2.ts`, `buyTokenV2.ts`)
+- **Utility V2 files** (`createLUTV2.ts`, `removeLiqV2.ts`)
+- **Client utilities V2** (`src/clients/` directory)
+- **Comprehensive testing and validation**
+- **Resolve compatibility layer dependencies**
 
 ---
 
