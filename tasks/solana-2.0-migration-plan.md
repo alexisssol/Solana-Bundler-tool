@@ -1,67 +1,229 @@
-# Solana Kit Migration Plan (Updated)
+# RaydiumUtil V2 Migration Plan
 
 ## Executive Summary
 
-**IMPORTANT CLARIFICATION**: After reviewing the official Solana Kit documentation, the migration path is different from what was initially understood. **Solana Kit (formerly Web3.js v2) is a completely separate library** from the traditional `@solana/web3.js` package.
+This document outlines the step-by-step migration of `src/clients/raydiumUtil.ts` to `src/clientsV2/raydiumUtilV2.ts` using Raydium SDK V2 and Solana Kit 2.0. The goal is to eliminate legacy compatibility layers and use pure V2 APIs.
 
-## Key Findings from Solana Kit Documentation
+## Current State Assessment
 
-### 1. Library Structure
+### Existing raydiumUtil.ts Functions
+1. `sendTx()` - Transaction sending utility
+2. `getWalletTokenAccount()` - Fetch wallet token accounts
+3. `sendTransaction()` - Wrapper for sending transactions
+4. `buildAndSendTx()` - Build and send simple transactions
+5. `getATAAddress()` - Get Associated Token Account address
+6. `sleepTime()` - Utility delay function
+7. `ammCreatePool()` - Create AMM pool (main function)
+8. `calcMarketStartPrice()` - Calculate market start price
+9. `findAssociatedTokenAddress()` - Find ATA address
 
-- **Traditional Web3.js**: `@solana/web3.js` (v1.x)
-- **Solana Kit**: `@solana/kit` + modular packages (`@solana-program/*`)
-- **These are separate libraries, not versions of the same package**
+### Key Dependencies to Migrate
+- **Raydium SDK V1** → **Raydium SDK V2**
+- **@solana/web3.js** → **@solana/kit**
+- **Legacy Connection/Keypair** → **V2 RPC/KeyPairSigner**
+- **Legacy PublicKey** → **Address type**
 
-### 2. Major Architectural Changes
+## Migration Strategy - Function by Function
 
-- **No single `Connection` class** → `createSolanaRpc()` and `createSolanaRpcSubscriptions()`
-- **`Keypair` → `generateKeyPairSigner()` or `createKeyPairSignerFromBytes()`**
-- **`PublicKey` → `address()` function**
-- **Modular architecture** with tree-shaking support
-- **Functional approach** with `pipe()` pattern for transactions
-- **Native `CryptoKeyPair` API** for secure key management
+## Migration Strategy - Function by Function
 
-### 3. Package Migration Map
+### Phase 1: Foundation Setup ✅ (COMPLETED)
+- [x] Created `AppConfigV2.ts` with Solana Kit 2.0 RPC and signers
+- [x] Set up basic V2 project structure
+- [x] Identified all functions requiring migration
 
+### Phase 2: Utility Functions ✅ (COMPLETED)
+
+#### Step 1: `sleepTime()` - Simple Utility Migration ✅ 
+**Priority:** HIGH (Easy win, no dependencies)
+**Status:** ✅ COMPLETED
+
+**Implementation:** `sleepTimeV2()` - No changes needed from V1
+**Tests:** ✅ Comprehensive unit tests in `tests/unit/raydiumUtilV2.test.ts`
+
+---
+
+#### Step 2: `calcMarketStartPrice()` - Pure Calculation Function ✅
+**Priority:** HIGH (No external dependencies)
+**Status:** ✅ COMPLETED
+
+**Implementation:** `calcMarketStartPriceV2()` - Uses V2 types
+**Tests:** ✅ Comprehensive unit tests including edge cases and performance tests
+
+---
+
+#### Step 3: `findAssociatedTokenAddress()` - Address Derivation ✅
+**Priority:** MEDIUM (Helper function, now critical dependency)
+**Status:** ✅ COMPLETED
+
+**V2 Implementation:** `findAssociatedTokenAddressV2()`
+- ✅ Uses V2 `Address` types instead of `PublicKey`
+- ✅ Leverages Raydium SDK V2 `findProgramAddress` pattern
+- ✅ Maintains identical behavior to V1
+- ✅ Full backward compatibility with alias
+
+**Tests:** ✅ Comprehensive unit tests including V1 vs V2 compatibility validation
+
+---
+
+#### Step 4: `getATAAddress()` & Related Functions ✅
+**Priority:** MEDIUM (Helper functions)
+**Status:** ✅ COMPLETED
+
+**V2 Implementation:** 
+- ✅ `getATAAddressV2()` - Returns both address and nonce
+- ✅ `findProgramAddressV2()` - Core V2 program address derivation
+- ✅ Proper V2 `Address` type handling throughout
+
+**Tests:** ✅ Unit tests covering deterministic results and cross-function consistency
+
+---
+
+### Phase 3: Transaction Functions (Complex Migration)
+
+#### Step 5: `sendTx()` - Core Transaction Sending
+**Priority:** HIGH (Foundation for transaction sending)
+**Status:** ⏳ PENDING
+
+**Current Implementation:**
 ```typescript
-// OLD (Web3.js v1.x)
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-
-// NEW (Solana Kit)
-import { createSolanaRpc, generateKeyPairSigner, address } from '@solana/kit';
-import { getTransferSolInstruction } from '@solana-program/system';
+export async function sendTx(
+  connection: Connection,
+  payer: Keypair | Signer,
+  txs: (VersionedTransaction | Transaction)[],
+  options?: SendOptions
+): Promise<string[]> {
+  // Legacy transaction signing and sending
+}
 ```
 
-## Migration Progress Status
+**V2 Migration Plan:**
+- Replace `Connection` with `AppConfigV2.rpc`
+- Replace `Keypair` with `KeyPairSigner`
+- Use Solana Kit transaction patterns
+- Handle V2 transaction message format
 
-### ✅ COMPLETED
+**Test Required:** `tests/unit/raydiumUtilV2.test.ts`
 
-- **Analysis of current codebase**
-- **Understanding of Solana Kit architecture**
-- **Created `src/config/AppConfigV2.ts`** - V2 configuration with Solana Kit RPC and signers
-- **Created `src/V2/createKeysV2.ts`** - V2 keypair management with base64 encoding
-- **Created `src/config/SecureKeypairManagerV2.ts`** - V2 secure keypair storage
-- **Created `src/V2/jitoPoolV2.ts`** - V2 pool creation and bundle management (with compatibility layer)
+---
 
-### 🔄 IN PROGRESS
+#### Step 6: `buildAndSendTx()` - Transaction Building
+**Priority:** HIGH (Used by pool creation)
+**Status:** ⏳ PENDING
 
-- **Migration planning and strategy**
-- **Transaction handling V2 implementation**
+**V2 Migration Plan:**
+- Use Raydium SDK V2 transaction building
+- Replace legacy simple transaction builder
+- Implement proper V2 signing patterns
 
-### ⚠️ KNOWN LIMITATIONS IN CURRENT V2 IMPLEMENTATION
+**Test Required:** `tests/unit/raydiumUtilV2.test.ts`
 
-- **Compatibility Layer Required**: The `jitoPoolV2.ts` currently uses a compatibility layer to work with existing Raydium SDK and Jito libraries that expect legacy Web3.js types
-- **KeyPairSigner Conversion**: Need to implement proper conversion between Solana Kit V2 `KeyPairSigner` and legacy `Keypair` for existing library compatibility
-- **Token Balance Fetching**: Token balance fetching needs to be fully migrated to use `@solana-program/token` when available
-- **Transaction Signing**: Some transaction signing still relies on legacy patterns due to library dependencies
+---
 
-### ⏳ PENDING
+#### Step 7: `ammCreatePool()` - Main Pool Creation Function
+**Priority:** CRITICAL (Core business logic)
+**Status:** ⏳ PENDING
 
-- **Trading function V2 files** (`sellFuncV2.ts`, `buyTokenV2.ts`)
-- **Utility V2 files** (`createLUTV2.ts`, `removeLiqV2.ts`)
-- **Client utilities V2** (`src/clients/` directory)
-- **Comprehensive testing and validation**
-- **Resolve compatibility layer dependencies**
+**Current Implementation:**
+```typescript
+export async function ammCreatePool(input: TestTxInputInfo) {
+  const initPoolInstructionResponse = await Liquidity.makeCreatePoolV4InstructionV2Simple({
+    connection,
+    programId: PROGRAMIDS.AmmV4,
+    marketInfo: {
+      marketId: input.targetMarketId,
+      programId: PROGRAMIDS.OPENBOOK_MARKET,
+    },
+    // ... rest of configuration
+  })
+  return { txs: initPoolInstructionResponse }
+}
+```
+
+**V2 Migration Plan:**
+- Use Raydium SDK V2 `Raydium.load()` pattern
+- Replace all legacy types with V2 equivalents
+- Use `AppConfigV2` for configuration
+- Implement proper V2 pool creation flow
+
+**Test Required:** `tests/integration/raydiumUtilV2.integration.test.ts` (Priority)
+
+---
+
+## Implementation Approach
+
+### Step-by-Step Process
+
+1. **Start with Simple Functions** (`sleepTime`, `calcMarketStartPrice`)
+   - Minimal changes required
+   - Build confidence and establish patterns
+
+2. **Core Utility Functions** (`getWalletTokenAccount`, `getATAAddress`)
+   - Address type system migration
+   - RPC pattern changes
+
+3. **Transaction Functions** (`sendTx`, `buildAndSendTx`)
+   - Complex transaction handling
+   - V2 signing patterns
+
+4. **Main Business Logic** (`ammCreatePool`)
+   - Integration of all previous functions
+   - Full Raydium SDK V2 integration
+
+### Testing Strategy
+
+#### Unit Tests
+```bash
+# Test individual functions as they're migrated
+npm test tests/unit/raydiumUtilV2.test.ts
+
+# Focus on specific function
+npm test -- --testNamePattern="getWalletTokenAccountV2"
+```
+
+#### Integration Tests
+```bash
+# Test complete workflows
+npm test tests/integration/raydiumUtilV2.integration.test.ts
+
+# Test pool creation end-to-end
+npm test -- --testNamePattern="ammCreatePool"
+```
+
+### Success Criteria
+
+#### For Each Function:
+- [ ] Compiles without errors
+- [ ] Passes unit tests
+- [ ] Maintains identical behavior to V1
+- [ ] Uses only V2 APIs (no compatibility layers)
+
+#### For Complete Migration:
+- [ ] All functions migrated and tested
+- [ ] Integration tests pass
+- [ ] Performance comparable to V1
+- [ ] Ready for production use
+
+### Current Blockers
+
+1. **TokenAccount Type Mapping**
+   - Raydium SDK V2 `TokenAccount` structure needs proper mapping to `TokenAccountV2`
+   - Need to understand exact property names from `parseTokenAccountResp()`
+
+2. **Connection/RPC Pattern**
+   - Need clear pattern for using `AppConfigV2.rpc` vs legacy `Connection`
+   - Raydium SDK V2 compatibility requirements
+
+3. **Type System Migration**
+   - `PublicKey` → `Address` conversion throughout
+   - Proper handling of V2 signer types
+
+### Next Steps
+
+1. **Fix `getWalletTokenAccountV2()` compilation errors**
+2. **Start with `sleepTime()` and `calcMarketStartPrice()` (easy wins)**
+3. **Create comprehensive test suite for each function**
+4. **Document V2 patterns for team reference**
 
 ---
 

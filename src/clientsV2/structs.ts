@@ -88,7 +88,7 @@ export const SPL_ACCOUNT_LAYOUT = struct<any>([
 
 // ✅ Helper functions for encoding/decoding
 export function encodeSPLMint(data: SPLMintData): Uint8Array {
-  return SPL_MINT_CODEC.encode(data);
+  return new Uint8Array(SPL_MINT_CODEC.encode(data));
 }
 
 export function decodeSPLMint(bytes: Uint8Array): SPLMintData {
@@ -96,7 +96,7 @@ export function decodeSPLMint(bytes: Uint8Array): SPLMintData {
 }
 
 export function encodeSPLAccount(data: SPLAccountData): Uint8Array {
-  return SPL_ACCOUNT_CODEC.encode(data);
+  return new Uint8Array(SPL_ACCOUNT_CODEC.encode(data));
 }
 
 export function decodeSPLAccount(bytes: Uint8Array): SPLAccountData {
