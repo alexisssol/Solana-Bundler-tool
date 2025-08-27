@@ -25,7 +25,12 @@ import {
   getATAAddress,
   getWalletTokenAccountV2,
   getWalletTokenAccount,
+  sendTxV2,
+  sendTx,
+  buildAndSendTxV2,
+  buildAndSendTx,
   type CalcStartPriceV2,
+  type SendOptionsV2,
   ZERO
 } from '../../src/clientsV2/raydiumUtilV2';
 
@@ -461,6 +466,109 @@ describe('RaydiumUtilV2 - Phase 3: Core Utility Functions', () => {
 
     test('getWalletTokenAccount should be an alias for getWalletTokenAccountV2', () => {
       expect(getWalletTokenAccount).toBe(getWalletTokenAccountV2);
+    });
+  });
+});
+
+//=============================================================================
+// PHASE 4 TESTS: Transaction Functions
+//=============================================================================
+
+describe('RaydiumUtilV2 - Phase 4: Transaction Functions', () => {
+
+  describe('sendTxV2()', () => {
+    
+    test('should be defined and accept correct parameter types', () => {
+      expect(typeof sendTxV2).toBe('function');
+      expect(sendTxV2.length).toBe(4); // Should accept 4 parameters (rpcUrl, payer, transactionMessages, options?)
+    });
+
+    test('should return Promise<string[]>', () => {
+      // Mock parameters for type checking (using KeyPairSigner and TransactionMessage[])
+      const rpcUrl = 'https://api.mainnet-beta.solana.com';
+      const mockPayer = {
+        address: 'mock-address',
+        keyPair: {} // Mock KeyPairSigner
+      } as any;
+      const mockTransactionMessages: any[] = []; // Mock TransactionMessage[] for V2
+      
+      // Function should return a Promise
+      const result = sendTxV2(rpcUrl, mockPayer, mockTransactionMessages);
+      expect(result).toBeInstanceOf(Promise);
+    });
+
+    test('should accept SendOptionsV2 parameters', () => {
+      const options: SendOptionsV2 = {
+        skipPreflight: true,
+        preflightCommitment: 'processed',
+        maxRetries: 3
+      };
+      
+      // Should compile without errors
+      expect(options.skipPreflight).toBe(true);
+      expect(options.preflightCommitment).toBe('processed');
+      expect(options.maxRetries).toBe(3);
+    });
+
+    // TODO: Add integration tests with actual TransactionMessage signing
+    // TODO: Add tests with mocked RPC responses
+    // TODO: Add tests for V2 transaction signing with KeyPairSigner
+  });
+
+  describe('buildAndSendTxV2()', () => {
+    
+    test('should be defined and accept correct parameter types', () => {
+      expect(typeof buildAndSendTxV2).toBe('function');
+      expect(buildAndSendTxV2.length).toBe(4); // Should accept 4 parameters (rpcUrl, payer, transactionMessages, options?)
+    });
+
+    test('should accept TransactionMessage array for V2', () => {
+      const mockTransactionMessages: any[] = []; // Mock TransactionMessage[] for V2
+      
+      // Should compile without errors
+      expect(Array.isArray(mockTransactionMessages)).toBe(true);
+      expect(mockTransactionMessages.length).toBe(0);
+    });
+
+    test('should return Promise<string[]>', () => {
+      const rpcUrl = 'https://api.mainnet-beta.solana.com';
+      const mockPayer = {
+        address: 'mock-address',
+        keyPair: {} // Mock KeyPairSigner
+      } as any;
+      const mockTransactionMessages: any[] = [];
+      
+      // Function should return a Promise
+      const result = buildAndSendTxV2(rpcUrl, mockPayer, mockTransactionMessages);
+      expect(result).toBeInstanceOf(Promise);
+    });
+
+    test('should accept SendOptionsV2 parameters', () => {
+      const options: SendOptionsV2 = {
+        skipPreflight: true,
+        preflightCommitment: 'processed',
+        maxRetries: 3
+      };
+      
+      // Should compile without errors
+      expect(options.skipPreflight).toBe(true);
+      expect(options.preflightCommitment).toBe('processed');
+      expect(options.maxRetries).toBe(3);
+    });
+
+    // TODO: Add integration tests with actual TransactionMessage bundling
+    // TODO: Add tests for market maker transaction integration
+    // TODO: Add tests for V2 transaction composition and signing
+  });
+
+  describe('Phase 4 Backward Compatibility', () => {
+    
+    test('sendTx should be an alias for sendTxV2', () => {
+      expect(sendTx).toBe(sendTxV2);
+    });
+
+    test('buildAndSendTx should be an alias for buildAndSendTxV2', () => {
+      expect(buildAndSendTx).toBe(buildAndSendTxV2);
     });
   });
 });

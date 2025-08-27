@@ -1,12 +1,4 @@
 import { 
-  createTransactionMessage,
-  appendTransactionMessageInstructions,
-  setTransactionMessageFeePayer,
-  setTransactionMessageLifetimeUsingBlockhash,
-  pipe,
-  generateKeyPairSigner,
-  signTransactionMessageWithSigners,
-  getSignatureFromTransaction,
   address,
   lamports,
   type Address,
@@ -34,7 +26,7 @@ import fs from "fs";
 
 // Import legacy types for compatibility with existing libraries
 import { PublicKey, VersionedTransaction, TransactionInstruction, TransactionMessage as LegacyTransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL, AddressLookupTableAccount } from "@solana/web3.js";
-import { fromLegacyPublicKey, toLegacyTransaction, fromLegacyKeypair } from "@solana/compat";
+import { fromLegacyPublicKey, fromLegacyKeypair } from "@solana/compat";
 
 const prompt = promptSync();
 const keyInfoPath = path.join(__dirname, "../../", "keyInfoV2.json");
@@ -76,7 +68,7 @@ export async function buyBundleV2() {
 	const lut = address(poolInfo.addressLUT?.toString() || '');
 
 	// Get address lookup table using V2 RPC
-	const lookupTableResponse = await config.rpc.getAddressLookupTable(lut, { commitment: 'finalized' }).send();
+	const lookupTableResponse = await config.rpc.getAccountInfo(lut, { commitment: 'finalized' }).send();
 	const lookupTableAccount = lookupTableResponse.value;
 
 	if (lookupTableAccount == null) {
@@ -112,14 +104,14 @@ export async function buyBundleV2() {
 	const tokenInfoLegacy = await spl.getMint(
 		// Convert Solana Kit RPC to legacy connection for compatibility
 		{ 
-			getAccountInfo: async (pubkey, commitment) => {
+			getAccountInfo: async (pubkey: any, commitment: any) => {
 				const response = await config.rpc.getAccountInfo(fromLegacyPublicKey(pubkey), { commitment }).send();
 				return response.value ? {
 					...response.value,
 					owner: new PublicKey(response.value.owner),
 					executable: response.value.executable,
 					lamports: response.value.lamports,
-					data: Buffer.from(response.value.data[0], response.value.data[1])
+					data: Buffer.from(response.value.data[0], response.value.data[1] as BufferEncoding)
 				} : null;
 			}
 		} as any,
@@ -158,7 +150,7 @@ export async function buyBundleV2() {
 			process.exit(0);
 		}
 
-		const marketData = Buffer.from(marketBufferInfo.value.data[0], marketBufferInfo.value.data[1]);
+		const marketData = Buffer.from(marketBufferInfo.value.data[0], marketBufferInfo.value.data[1] as BufferEncoding);
 		const { baseMint, quoteMint, baseLotSize, quoteLotSize, baseVault, quoteVault, bids, asks, eventQueue, requestQueue } = MARKET_STATE_LAYOUT_V3.decode(marketData);
 
 		// Generate pool keys using existing Raydium SDK (convert addresses as needed)

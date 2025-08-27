@@ -40,7 +40,7 @@ export class SecureKeypairManager {
     const iv = crypto.randomBytes(IV_LENGTH);
     const key = this.deriveKey(salt);
     
-    const cipher = crypto.createCipher(ALGORITHM.replace('-gcm', ''), key);
+    const cipher = crypto.createCipheriv(ALGORITHM.replace('-gcm', ''), key, iv);
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
 

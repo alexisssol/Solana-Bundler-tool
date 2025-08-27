@@ -14,22 +14,22 @@ import { createAppConfigV2 } from '../config/AppConfigV2';
 export async function formatAmmKeysById(id: string): Promise<ApiPoolInfoV4> {
   const config = await createAppConfigV2();
   
-  // ✅ V2 RPC call with proper response handling
-  const accountResponse = await config.rpc.getAccountInfo(address(id));
+  // ✅ V2 RPC call with proper response handling - await the .send()
+  const accountResponse = await config.rpc.getAccountInfo(address(id)).send();
   if (accountResponse.value === null) throw Error('get id info error');
   
   const account = accountResponse.value;
   const info = LIQUIDITY_STATE_LAYOUT_V4.decode(Buffer.from(account.data, 'base64'));
 
   const marketId = info.marketId;
-  const marketResponse = await config.rpc.getAccountInfo(address(marketId.toString()));
+  const marketResponse = await config.rpc.getAccountInfo(address(marketId.toString())).send();
   if (marketResponse.value === null) throw Error('get market info error');
   
   const marketAccount = marketResponse.value;
   const marketInfo = MARKET_STATE_LAYOUT_V3.decode(Buffer.from(marketAccount.data, 'base64'));
 
   const lpMint = info.lpMint;
-  const lpMintResponse = await config.rpc.getAccountInfo(address(lpMint.toString()));
+  const lpMintResponse = await config.rpc.getAccountInfo(address(lpMint.toString())).send();
   if (lpMintResponse.value === null) throw Error('get lp mint info error');
   
   const lpMintAccount = lpMintResponse.value;

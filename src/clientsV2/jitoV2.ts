@@ -28,7 +28,7 @@ async function initializeJitoClientsV2(): Promise<{
 }> {
   try {
     // Validate configuration
-    if (!BLOCK_ENGINE_URLS || BLOCK_ENGINE_URLS.length === 0) {
+    if (!BLOCK_ENGINE_URLS) {
       throw new Error('Block engine URLs not configured');
     }
     

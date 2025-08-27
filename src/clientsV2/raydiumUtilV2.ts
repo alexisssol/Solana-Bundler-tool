@@ -1,5 +1,4 @@
 /**
- * RaydiumUtilV2 - Clean V2 Implementation
  * 
  * This file contains the V2 migration of raydiumUtil.ts using:
  * - Raydium SDK V2
@@ -9,13 +8,9 @@
  * Migration Progress:
  * ✅ Phase 2: Simple Utility Functions (sleepTime, calcMarketStartPrice)
  * ✅ Phase 3: Core Utility Functions (getWalletTokenAccount, getATAAddress, findAssociatedTokenAddress)
- * ⏳ Phase 4: Transaction Functions (sendTx, buildAndSendTx)
+ * ✅ Phase 4: Transaction Functions (sendTx, buildAndSendTx)
  * ⏳ Phase 5: Main Business Logic (ammCreatePool)
  */
-
-//=============================================================================
-// IMPORTS - V2 APIs ONLY
-//=============================================================================
 
 // ✅ Solana Kit 2.0 imports
 import { 
@@ -24,32 +19,29 @@ import {
   type KeyPairSigner,
   createSolanaRpc,
   type Rpc,
-  type SolanaRpcApi
+  type SolanaRpcApi,
+  type Base64EncodedWireTransaction,
+  type Commitment,
+  createTransactionMessage,
+  signTransactionMessageWithSigners,
+  getBase64EncodedWireTransaction,
+  setTransactionMessageFeePayer,
+  setTransactionMessageLifetimeUsingBlockhash,
+  partiallySignTransactionMessageWithSigners,
+  type TransactionMessage
 } from '@solana/kit';
-import { findProgramAddress } from '@raydium-io/raydium-sdk-v2'
+import { findProgramAddress } from '@raydium-io/raydium-sdk-v2';
 
-// ✅ Legacy Web3.js imports for compatibility where needed
-import { PublicKey } from '@solana/web3.js';
-
-// ✅ SPL Token imports
+import { PublicKey, VersionedTransaction, Keypair, Transaction } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
-
-// ✅ Raydium SDK imports for layout decoding (needed for compatibility)
 import { SPL_ACCOUNT_LAYOUT } from '@raydium-io/raydium-sdk';
-
-// ✅ Local V2 configuration
 import { AppConfigV2 } from '../config/AppConfigV2';
-
-// ✅ BN for calculations (keeping for compatibility with existing patterns)
 import { BN } from '@project-serum/anchor';
 
 //=============================================================================
 // V2 TYPE DEFINITIONS
 //=============================================================================
 
-/**
- * ✅ V2 Types - Using Address instead of PublicKey throughout
- */
 export type CalcStartPriceV2 = {
   addBaseAmount: BN;
   addQuoteAmount: BN;
@@ -87,6 +79,19 @@ export type TestTxInputInfoV2 = LiquidityPairTargetInfoV2 & CalcStartPriceV2 & {
   wallet: KeyPairSigner;
 };
 
+export type SendOptionsV2 = {
+  skipPreflight?: boolean;
+  preflightCommitment?: Commitment;
+  maxRetries?: number;
+};
+
+export type InnerTransactionV2 = {
+  /** Transaction to be executed */
+  transaction: VersionedTransaction | Transaction;
+  /** Optional instruction data for reference */
+  instructionData?: any;
+};
+
 //=============================================================================
 // PHASE 2: SIMPLE UTILITY FUNCTIONS (V2 - COMPLETED ✅)
 //=============================================================================
@@ -118,14 +123,6 @@ export const calcMarketStartPrice = calcMarketStartPriceV2;
 // PHASE 3: CORE UTILITY FUNCTIONS (COMPLETED ✅)
 //=============================================================================
 
-/**
- * ✅ V2 Get Wallet Token Account using Solana Kit 2.0 RPC
- * Migrated from V1 raydiumUtil.ts with V2 RPC patterns
- * 
- * @param rpcUrl - RPC endpoint URL (from AppConfigV2)
- * @param walletAddress - Wallet address as V2 Address type
- * @returns Promise<TokenAccountV2[]> - Array of token accounts in V2 format
- */
 export async function getWalletTokenAccountV2(
   rpcUrl: string,
   walletAddress: Address
@@ -172,9 +169,6 @@ export async function getWalletTokenAccountV2(
  * ✅ V2 Find Associated Token Address using V2 types
  * Migrated from V1 raydiumUtil.ts with proper V2 type handling
  * 
- * @param walletAddress - Wallet address as V2 Address type
- * @param tokenMintAddress - Token mint address as V2 Address type
- * @returns Associated Token Account address as V2 Address type
  */
 export function findAssociatedTokenAddressV2(
   walletAddress: Address,
@@ -223,14 +217,98 @@ export function getATAAddressV2(
 export const findAssociatedTokenAddress = findAssociatedTokenAddressV2;
 export const getATAAddress = getATAAddressV2;
 export const getWalletTokenAccount = getWalletTokenAccountV2;
+export const sendTx = sendTxV2;
+export const buildAndSendTx = buildAndSendTxV2;
 
 //=============================================================================
-// PHASE 4: TRANSACTION FUNCTIONS (PENDING ⏳)  
+// PHASE 4: TRANSACTION FUNCTIONS (COMPLETED ✅)  
 //=============================================================================
 
-// TODO: Implement sendTxV2()
-// TODO: Implement sendTransactionV2()
-// TODO: Implement buildAndSendTxV2()
+/**
+ * ✅ V2 Send Transaction using Solana Kit 2.0 RPC
+ * Migrated from V1 raydiumUtil.ts with V2 RPC patterns and proper V2 transaction types
+ * 
+ * @param rpcUrl - RPC endpoint URL (from AppConfigV2)
+ * @param payer - KeyPairSigner for signing transactions (V2 type)
+ * @param txs - Array of pre-built transactions from market maker
+ * @param options - Send transaction options (V2 format)
+ * @returns Promise<string[]> - Array of transaction signatures
+ */
+export async function sendTxV2(
+  rpcUrl: string,
+  payer: KeyPairSigner,
+  transactionMessages: TransactionMessage[], // V2 types
+  options?: SendOptionsV2
+): Promise<string[]> {
+  // Create RPC connection using Solana Kit 2.0
+  const rpc = createSolanaRpc(rpcUrl);
+  
+  const txids: string[] = [];
+  
+  // Get recent blockhash for lifetime constraint
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+  
+  for (const transactionMessage of transactionMessages) {
+    // Properly create a compilable transaction using Solana Kit 2.0 APIs
+    // Start with setting the fee payer
+    const withFeePayer = setTransactionMessageFeePayer(payer.address, transactionMessage);
+    
+    // Then set the lifetime constraint using blockhash
+    const compilableTransaction = setTransactionMessageLifetimeUsingBlockhash(
+      latestBlockhash, 
+      withFeePayer
+    );
+    
+    // Sign the transaction with V2 signing
+    const signedTransaction = await partiallySignTransactionMessageWithSigners(
+      compilableTransaction,
+      { [payer.address]: payer }
+    );
+    
+    // Encode the transaction for sending
+    const base64Transaction = getBase64EncodedWireTransaction(signedTransaction);
+    
+    // Send the transaction
+    const signature = await rpc.sendTransaction(base64Transaction, {
+      skipPreflight: options?.skipPreflight || false,
+      preflightCommitment: options?.preflightCommitment || 'processed',
+      maxRetries: options?.maxRetries ? BigInt(options.maxRetries) : undefined,
+    }).send();
+    
+    txids.push(signature);
+  }
+  
+  return txids;
+}
+
+/**
+ * ✅ V2 Build and Send Transaction Bundle
+ * Takes a list of transactions from market maker, signs them, and sends as a bundle
+ * 
+ * @param rpcUrl - RPC endpoint URL (from AppConfigV2)
+ * @param payer - KeyPairSigner for signing transactions (V2 type)
+ * @param innerTransactions - Array of pre-built transactions from market maker
+ * @param options - Send transaction options (V2 format)
+ * @returns Promise<string[]> - Array of transaction signatures
+ */
+export async function buildAndSendTxV2(
+  rpcUrl: string,
+  payer: KeyPairSigner,
+  innerTransactions: TransactionMessage[],
+  options?: SendOptionsV2
+): Promise<string[]> {
+  console.log(`🔄 Processing ${innerTransactions.length} transactions for V2 bundle`);
+  
+  // Use our V2 sendTx function with proper V2 types
+  const signatures = await sendTxV2(rpcUrl, payer, innerTransactions, options);
+  
+  console.log(`✅ Successfully sent ${signatures.length} transactions`);
+  signatures.forEach((sig, index) => {
+    console.log(`   Transaction ${index + 1}: ${sig}`);
+  });
+  
+  return signatures;
+}
 
 //=============================================================================
 // PHASE 5: MAIN BUSINESS LOGIC (PENDING ⏳)
