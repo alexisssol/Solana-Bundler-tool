@@ -29,8 +29,12 @@ import {
   sendTx,
   buildAndSendTxV2,
   buildAndSendTx,
+  ammCreatePoolV2,
+  ammCreatePool,
   type CalcStartPriceV2,
   type SendOptionsV2,
+  type TestTxInputInfoV2,
+  type TokenInfoV2,
   ZERO
 } from '../../src/clientsV2/raydiumUtilV2';
 
