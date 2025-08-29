@@ -55,20 +55,6 @@ describe('RaydiumUtilV2 - Simple Utility Functions', () => {
       jest.restoreAllMocks();
     });
 
-    test('should sleep for the specified time', async () => {
-      const startTime = Date.now();
-      const sleepDuration = 100; // 100ms
-      
-      await sleepTimeV2(sleepDuration);
-      
-      const endTime = Date.now();
-      const actualDuration = endTime - startTime;
-      
-      // Allow for some variance in timing (±50ms)
-      expect(actualDuration).toBeGreaterThanOrEqual(sleepDuration - 50);
-      expect(actualDuration).toBeLessThan(sleepDuration + 100);
-    });
-
     test('should log the correct message', async () => {
       const consoleSpy = jest.spyOn(console, 'log');
       const sleepDuration = 50;

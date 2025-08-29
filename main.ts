@@ -1,5 +1,7 @@
-import { createKeypairs } from "./src/createKeys";
-import { buyBundle } from "./src/jitoPool";
+//import { createKeypairs } from "./src/createKeys";
+//import { buyBundle } from "./src/jitoPool";
+import { createKeypairsV2 as createKeypairs} from './src/coreV2/createKeysV2'
+import { buyBundleV2 as buyBundle } from './src/coreV2/jitoPoolV2'
 import { sender } from "./src/senderUI";
 import { createWalletSells, sellXPercentage } from "./src/sellFunc";
 import { remove } from "./src/removeLiq";

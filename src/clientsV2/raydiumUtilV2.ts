@@ -1,18 +1,4 @@
-/**
- * 
- * This file contains the V2 migration of raydiumUtil.ts using:
- * - Raydium SDK V2
- * - Solana Kit 2.0 (@solana/kit)
- * - Pure V2 APIs without legacy compatibility layers
- * 
- * Migration Progress:
- * ✅ Phase 2: Simple Utility Functions (sleepTime, calcMarketStartPrice)
- * ✅ Phase 3: Core Utility Functions (getWalletTokenAccount, getATAAddress, findAssociatedTokenAddress)
- * ✅ Phase 4: Transaction Functions (sendTx, buildAndSendTx)
- * ✅ Phase 5: Main Business Logic (ammCreatePool)
- */
 
-// ✅ Solana Kit 2.0 imports
 import { 
   address, 
   type Address, 
@@ -26,24 +12,211 @@ import {
   createTransactionMessage,
   type TransactionMessage
 } from '@solana/kit';
-
-// ✅ Raydium SDK V2 imports
 import { 
   findProgramAddress,
   AMM_V4,
   OPEN_BOOK_PROGRAM,
   FEE_DESTINATION_ID,
   MARKET_STATE_LAYOUT_V3,
-  Raydium
+  Raydium,
+  TxVersion,
+  parseTokenAccountResp
 } from '@raydium-io/raydium-sdk-v2';
 
 // Legacy imports for compatibility
 import { PublicKey, VersionedTransaction, Keypair, Transaction } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { SPL_ACCOUNT_LAYOUT } from '@raydium-io/raydium-sdk';
 import { AppConfigV2 } from '../config/AppConfigV2';
 import { BN } from '@project-serum/anchor';
 import { makeTxVersion } from './constantsV2'
+
+//=============================================================================
+// RAYDIUM SDK V2 SINGLETON PATTERN
+//=============================================================================
+
+let raydiumInstance: Raydium | undefined;
+
+/**
+ * ✅ Initialize Raydium SDK V2 with singleton pattern
+ * Based on official Raydium SDK V2 example
+ * 
+ * @param params - Optional parameters for SDK initialization
+ * @returns Promise<Raydium> - Singleton Raydium instance
+ */
+export const initRaydiumSdk = async (params?: { 
+  loadToken?: boolean;
+  cluster?: 'mainnet' | 'devnet';
+  rpcUrl?: string;
+  owner?: KeyPairSigner;
+}): Promise<Raydium> => {
+  if (raydiumInstance) return raydiumInstance;
+  
+  // Get configuration
+  const config = await AppConfigV2.create();
+  await config.validateConfig();
+  
+  const cluster = params?.cluster || 'mainnet';
+  const rpcUrl = params?.rpcUrl || config.rpcUrl;
+  const owner = params?.owner || config.wallet;
+  
+  console.log(`🔗 Connecting to RPC ${rpcUrl} in ${cluster}`);
+  
+  if (rpcUrl.includes('api.mainnet-beta.solana.com')) {
+    console.warn('⚠️ Using free RPC node might cause unexpected errors, strongly suggest using paid RPC node');
+  }
+  
+  // Create legacy connection for Raydium SDK V2 compatibility
+  const legacyConnection = {
+    rpcEndpoint: rpcUrl,
+    getAccountInfo: async (pubkey: PublicKey, commitment?: any) => {
+      const rpc = createSolanaRpc(rpcUrl);
+      const response = await rpc.getAccountInfo(address(pubkey.toBase58()), { commitment }).send();
+      return response.value ? {
+        ...response.value,
+        owner: new PublicKey(response.value.owner),
+        executable: response.value.executable,
+        lamports: response.value.lamports,
+        data: Buffer.from(response.value.data[0], response.value.data[1] as BufferEncoding)
+      } : null;
+    },
+    getLatestBlockhash: async (commitment?: any) => {
+      const rpc = createSolanaRpc(rpcUrl);
+      const response = await rpc.getLatestBlockhash({ commitment }).send();
+      return {
+        value: {
+          blockhash: response.value.blockhash,
+          lastValidBlockHeight: Number(response.value.lastValidBlockHeight)
+        }
+      };
+    },
+    sendTransaction: async (transaction: any) => {
+      const rpc = createSolanaRpc(rpcUrl);
+      return await rpc.sendTransaction(transaction).send();
+    },
+    getTokenAccountsByOwner: async (owner: PublicKey, filter: any, commitment?: any) => {
+      const rpc = createSolanaRpc(rpcUrl);
+      const response = await rpc.getTokenAccountsByOwner(
+        address(owner.toBase58()),
+        filter.programId ? { programId: address(filter.programId.toString()) } : filter,
+        { commitment }
+      ).send();
+      return {
+        context: response.context,
+        value: response.value.map(acc => ({
+          ...acc,
+          account: {
+            ...acc.account,
+            owner: new PublicKey(acc.account.owner)
+          }
+        }))
+      };
+    }
+  } as any;
+  
+  raydiumInstance = await Raydium.load({
+    owner: new PublicKey(owner.address), // Convert V2 Address to legacy PublicKey
+    connection: legacyConnection,
+    cluster,
+    disableFeatureCheck: true,
+    disableLoadToken: !params?.loadToken,
+    blockhashCommitment: 'finalized',
+  });
+  
+  console.log('✅ Raydium SDK V2 initialized successfully');
+  return raydiumInstance;
+};
+
+/**
+ * ✅ Fetch token account data for Raydium SDK
+ * Based on official example pattern
+ * 
+ * @param owner - Owner KeyPairSigner
+ * @param rpcUrl - RPC URL
+ * @returns Token account data for Raydium SDK
+ */
+export const fetchTokenAccountData = async (owner: KeyPairSigner, rpcUrl: string) => {
+  const rpc = createSolanaRpc(rpcUrl);
+  const ownerAddress = address(owner.address);
+  
+  // Get SOL account info
+  const solAccountResp = await rpc.getAccountInfo(ownerAddress).send();
+  
+  // Get TOKEN_PROGRAM_ID accounts
+  const tokenAccountResp = await rpc.getTokenAccountsByOwner(
+    ownerAddress, 
+    { programId: address(TOKEN_PROGRAM_ID.toString()) }
+  ).send();
+  
+  // Get TOKEN_2022_PROGRAM_ID accounts
+  const token2022Resp = await rpc.getTokenAccountsByOwner(
+    ownerAddress,
+    { programId: address(TOKEN_2022_PROGRAM_ID.toString()) }
+  ).send();
+  
+  // Convert to legacy format for parseTokenAccountResp
+  const tokenAccountData = parseTokenAccountResp({
+    owner: new PublicKey(owner.address),
+    solAccountResp: solAccountResp.value ? {
+      ...solAccountResp.value,
+      owner: new PublicKey(solAccountResp.value.owner),
+      lamports: Number(solAccountResp.value.lamports),
+      rentEpoch: Number(solAccountResp.value.rentEpoch),
+      data: Buffer.from(solAccountResp.value.data[0], solAccountResp.value.data[1] as BufferEncoding)
+    } : null,
+    tokenAccountResp: {
+      context: {
+        slot: Number(tokenAccountResp.context.slot)
+      },
+      value: [
+        ...tokenAccountResp.value.map(acc => ({
+          ...acc,
+          pubkey: new PublicKey(acc.pubkey),
+          account: {
+            ...acc.account,
+            owner: new PublicKey(acc.account.owner),
+            lamports: Number(acc.account.lamports),
+            rentEpoch: Number(acc.account.rentEpoch),
+            space: Number(acc.account.space),
+            data: Buffer.from(acc.account.data[0], acc.account.data[1] as BufferEncoding)
+          }
+        })),
+        ...token2022Resp.value.map(acc => ({
+          ...acc,
+          pubkey: new PublicKey(acc.pubkey),
+          account: {
+            ...acc.account,
+            owner: new PublicKey(acc.account.owner),
+            lamports: Number(acc.account.lamports),
+            rentEpoch: Number(acc.account.rentEpoch),
+            space: Number(acc.account.space),
+            data: Buffer.from(acc.account.data[0], acc.account.data[1] as BufferEncoding)
+          }
+        }))
+      ],
+    },
+  });
+  
+  return tokenAccountData;
+};
+
+/**
+ * ✅ Get existing Raydium instance or throw error
+ * Use this when you need the Raydium instance and expect it to be initialized
+ */
+export const getRaydiumInstance = (): Raydium => {
+  if (!raydiumInstance) {
+    throw new Error('Raydium SDK not initialized. Call initRaydiumSdk() first.');
+  }
+  return raydiumInstance;
+};
+
+/**
+ * ✅ Reset Raydium instance (useful for testing)
+ */
+export const resetRaydiumInstance = (): void => {
+  raydiumInstance = undefined;
+};
 
 //=============================================================================
 // V2 TYPE DEFINITIONS
@@ -106,10 +279,6 @@ export type InnerTransactionV2 = {
   instructionData?: any;
 };
 
-//=============================================================================
-// PHASE 2: SIMPLE UTILITY FUNCTIONS (V2 - COMPLETED ✅)
-//=============================================================================
-
 export async function sleepTimeV2(ms: number): Promise<void> {
   console.log((new Date()).toLocaleString(), 'sleepTimeV2', ms);
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -122,20 +291,10 @@ export function calcMarketStartPriceV2(input: CalcStartPriceV2): number {
   return baseAmount / quoteAmount;
 }
 
-//=============================================================================
-// BACKWARD COMPATIBILITY EXPORTS
-//=============================================================================
 
-/**
- * ✅ Backward compatibility aliases - can be used by existing code
- * These maintain the same function signatures as V1
- */
 export const sleepTime = sleepTimeV2;
 export const calcMarketStartPrice = calcMarketStartPriceV2;
 
-//=============================================================================
-// PHASE 3: CORE UTILITY FUNCTIONS (COMPLETED ✅)
-//=============================================================================
 
 export async function getWalletTokenAccountV2(
   rpcUrl: string,
@@ -178,12 +337,6 @@ export async function getWalletTokenAccountV2(
 }
 
 
-
-/**
- * ✅ V2 Find Associated Token Address using V2 types
- * Migrated from V1 raydiumUtil.ts with proper V2 type handling
- * 
- */
 export function findAssociatedTokenAddressV2(
   walletAddress: Address,
   tokenMintAddress: Address
@@ -202,9 +355,7 @@ export function findAssociatedTokenAddressV2(
 }
 
 /**
- * ✅ V2 Get ATA Address with nonce (alternative implementation)
- * Provides both address and nonce like the original V1 function
- * 
+
  * @param programId - Program ID as V2 Address type
  * @param owner - Owner address as V2 Address type  
  * @param mint - Mint address as V2 Address type
@@ -227,16 +378,11 @@ export function getATAAddressV2(
   return { publicKey: address(publicKey.toString()), nonce };
 }
 
-// ✅ Backward compatibility exports for existing code
 export const findAssociatedTokenAddress = findAssociatedTokenAddressV2;
 export const getATAAddress = getATAAddressV2;
 export const getWalletTokenAccount = getWalletTokenAccountV2;
 export const sendTx = sendTxV2;
 export const buildAndSendTx = buildAndSendTxV2;
-
-//=============================================================================
-// PHASE 4: TRANSACTION FUNCTIONS (COMPLETED ✅)  
-//=============================================================================
 
 /**
  * ✅ V2 Send Transaction using Solana Kit 2.0 RPC
@@ -316,22 +462,20 @@ export async function buildAndSendTxV2(
   // Use our V2 sendTx function with proper V2 types
   const signatures = await sendTxV2(rpcUrl, payer, innerTransactions, options);
   
-  console.log(`✅ Successfully sent ${signatures.length} transactions`);
-  signatures.forEach((sig, index) => {
-    console.log(`   Transaction ${index + 1}: ${sig}`);
-  });
+  // Only log if not in test environment
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(`✅ Successfully sent ${signatures.length} transactions`);
+    signatures.forEach((sig, index) => {
+      console.log(`   Transaction ${index + 1}: ${sig}`);
+    });
+  }
   
   return signatures;
 }
 
-//=============================================================================
-// PHASE 5: MAIN BUSINESS LOGIC (COMPLETED ✅)
-//=============================================================================
-
 /**
  * ✅ V2 AMM Create Pool Function
- * Based on Raydium SDK V2 official example:
- * https://github.com/raydium-io/raydium-sdk-V2-demo/blob/744f974b03a5bf2424429bb6990cfd09e31fe2c3/src/amm/createAmmPool.ts
+ * Updated to use singleton Raydium SDK pattern following official example
  * 
  * @param input - Pool creation input parameters (V2 format)
  * @returns Promise with execute function and extInfo
@@ -342,45 +486,8 @@ export async function ammCreatePoolV2(input: TestTxInputInfoV2): Promise<{
 }> {
   console.log('🏗️ Creating AMM Pool V2 with Raydium SDK V2...');
   
-  // Get AppConfig for RPC and configuration
-  const config = await AppConfigV2.create();
-  await config.validateConfig();
-
-  
-  // Create Raydium instance with V2 pattern
-  const raydium = await Raydium.load({
-    cluster: 'mainnet', // or 'devnet' based on config
-    connection: {
-      // Convert Solana Kit RPC to legacy connection for SDK compatibility
-      getAccountInfo: async (pubkey: PublicKey, commitment?: any) => {
-        const rpc = createSolanaRpc(config.rpcUrl);
-        const response = await rpc.getAccountInfo(address(pubkey.toBase58()), { commitment }).send();
-        return response.value ? {
-          ...response.value,
-          owner: new PublicKey(response.value.owner),
-          executable: response.value.executable,
-          lamports: response.value.lamports,
-          data: Buffer.from(response.value.data[0], response.value.data[1] as BufferEncoding)
-        } : null;
-      },
-      getLatestBlockhash: async (commitment?: any) => {
-        const rpc = createSolanaRpc(config.rpcUrl);
-        const response = await rpc.getLatestBlockhash({ commitment }).send();
-        return {
-          value: {
-            blockhash: response.value.blockhash,
-            lastValidBlockHeight: Number(response.value.lastValidBlockhash)
-          }
-        };
-      },
-      // Add other required connection methods as needed
-      sendTransaction: async (transaction: any) => {
-        const rpc = createSolanaRpc(config.rpcUrl);
-        return await rpc.sendTransaction(transaction).send();
-      }
-    } as any,
-    owner: new PublicKey(input.wallet.address), // Convert V2 Address to legacy PublicKey
-  });
+  // Get Raydium instance using singleton pattern
+  const raydium = await initRaydiumSdk({ loadToken: true });
   
   // Convert input market ID to PublicKey
   const marketId = new PublicKey(input.targetMarketId);
@@ -452,17 +559,8 @@ export async function ammCreatePoolV2(input: TestTxInputInfoV2): Promise<{
   return { execute, extInfo };
 }
 
-//=============================================================================
-// BACKWARD COMPATIBILITY EXPORTS
-//=============================================================================
 
-// ✅ Backward compatibility export
 export const ammCreatePool = ammCreatePoolV2;
 
-//=============================================================================
-// UTILITY CONSTANTS
-//=============================================================================
 
-export {
-  ZERO
-};
+export const ZERO = new BN(0);

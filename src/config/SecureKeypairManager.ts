@@ -59,9 +59,9 @@ export class SecureKeypairManager {
 
     const salt = Buffer.from(encryptedData.salt, 'hex');
     const key = this.deriveKey(salt);
-    
-    const decipher = crypto.createDecipher(ALGORITHM.replace('-gcm', ''), key);
-    
+
+    const decipher = crypto.createDecipheriv(ALGORITHM.replace('-gcm', ''), key, Buffer.from(encryptedData.iv, 'hex'));
+
     let decrypted = decipher.update(encryptedData.encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     

@@ -7,7 +7,7 @@ import * as structs from './structs';
 import { createAppConfigV2 } from '../config/AppConfigV2';
 import { IPoolKeysV2 } from './interfaces';
 import { ApiPoolInfoV4 } from "@raydium-io/raydium-sdk";
-
+import { } from '@solana/spl-token'
 // ✅ V2 Address instead of PublicKey
 const openbookProgram = address('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX');
 const TOKEN_KEG_ADDRESS = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');

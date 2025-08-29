@@ -19,13 +19,13 @@ const mockFetchAddressesForLookupTables = fetchAddressesForLookupTables as jest.
 describe('LookupTableProviderV2', () => {
   let provider: LookupTableProviderV2;
 
-  // Test addresses
+  // Test addresses - using valid Solana addresses
   const lutAddress1 = address('Gr8rXuDwE2Vd2F5tifkPyMaUR67636YgrZEjkJf9RR9V');
-  const lutAddress2 = address('22222222222222222222222222222222222222222222');
-  const addr1 = address('11111111111111111111111111111111111111111111');
-  const addr2 = address('33333333333333333333333333333333333333333333');
-  const addr3 = address('44444444444444444444444444444444444444444444');
-  const addr4 = address('55555555555555555555555555555555555555555555');
+  const lutAddress2 = address('So11111111111111111111111111111111111111112');
+  const addr1 = address('11111111111111111111111111111112');
+  const addr2 = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+  const addr3 = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+  const addr4 = address('SysvarRent111111111111111111111111111111111');
 
   beforeEach(() => {
     provider = new LookupTableProviderV2();
