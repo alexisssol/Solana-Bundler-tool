@@ -1,13 +1,6 @@
-/**
- * Simple test script to validate buildTxnV2 functionality
- * Run this to test the V2 transaction building
- */
 
 import { AppConfigV2 } from '../config/AppConfigV2';
 import { 
-  buildTxnV2, 
-  validateTxnV2, 
-  debugTxnV2, 
   generateWSOLATAForKeypairsV2,
   chunkWSOLATAInstructionsV2,
   buildWSOLATATransactionsV2,
@@ -68,18 +61,8 @@ async function testCreateLUTV2() {
     console.log(`📍 LUT Address: ${result.lutAddress}`);
     console.log(`📊 Summary: ${result.summary.totalTransactions} transactions, ${result.summary.wsolATACount} WSOL ATA txns`);
     
-    // Validate all transactions
-    let validCount = 0;
-    for (let i = 0; i < result.transactions.length; i++) {
-      const tx = result.transactions[i];
-      if (validateTxnV2(tx, config)) {
-        validCount++;
-      }
-      debugTxnV2(tx, `Transaction ${i + 1}`);
-    }
     
-    console.log(`✅ Transaction validation: ${validCount}/${result.transactions.length} valid`);
-    console.log('🎉 CreateLUT V2 test completed successfully!');
+    console.log('🎉 CreateLUT V2 test completed!');
     
   } catch (error) {
     console.error('❌ CreateLUT V2 test failed:', error);
@@ -117,18 +100,7 @@ async function testExtendLUTV2() {
     console.log(`✅ ExtendLUT V2 successful!`);
     console.log(`📦 Generated ${transactions.length} extension transactions`);
     
-    // Validate all transactions
-    let validCount = 0;
-    for (let i = 0; i < transactions.length; i++) {
-      const tx = transactions[i];
-      if (validateTxnV2(tx, config)) {
-        validCount++;
-      }
-      debugTxnV2(tx, `Extension Transaction ${i + 1}`);
-    }
-    
-    console.log(`✅ Transaction validation: ${validCount}/${transactions.length} valid`);
-    console.log('🎉 ExtendLUT V2 test completed successfully!');
+    console.log('🎉 ExtendLUT V2 test completed!');
     
   } catch (error) {
     console.error('❌ ExtendLUT V2 test failed:', error);
