@@ -473,12 +473,15 @@ export async function chunkWSOLATAInstructionsV2(
  * Complete V2 workflow: Generate WSOL ATAs and build transactions
  * 
  * This function combines generateWSOLATAForKeypairsV2 and buildTxnV2 to provide
- * a complete replacement for the legacy workflow.
+ * a hybrid V2 replacement for the legacy workflow (V2 RPC + legacy instruction compatibility).
+ * 
+ * Note: Currently uses buildTxnV2 (hybrid) instead of buildPureV2Transaction because
+ * generateWSOLATAForKeypairsV2 still generates legacy TransactionInstruction objects.
  * 
  * @param config - AppConfigV2 instance
  * @param maxKeypairs - Maximum number of keypairs to process (default: 27)
  * @param jitoTipAmount - Jito tip amount in SOL (default: 0)
- * @returns Promise<VersionedTransaction[]> - Array of built transactions
+ * @returns Promise<VersionedTransaction[]> - Array of built V2 transactions (legacy format for compatibility)
  */
 export async function buildWSOLATATransactionsV2(
   config: AppConfigV2,
@@ -486,7 +489,7 @@ export async function buildWSOLATATransactionsV2(
   jitoTipAmount: number = 0
 ): Promise<VersionedTransaction[]> {
   try {
-    console.log('🚀 Building WSOL ATA transactions (V2 Complete Workflow)...');
+    console.log('🚀 Building WSOL ATA transactions (Hybrid V2 Workflow: V2 RPC + Legacy Instructions)...');
     
     // Step 1: Generate WSOL ATA instructions
     const instructions = await generateWSOLATAForKeypairsV2(config, maxKeypairs, true);
@@ -494,29 +497,32 @@ export async function buildWSOLATATransactionsV2(
     // Step 2: Chunk instructions
     const chunks = await chunkWSOLATAInstructionsV2(config, instructions, 10, jitoTipAmount);
     
-    // Step 3: Build transactions
+    // Step 3: Build transactions using hybrid V2 patterns (V2 RPC + legacy instruction compatibility)
     const transactions: VersionedTransaction[] = [];
     
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      console.log(`🔨 Building transaction ${i + 1}/${chunks.length} with ${chunk.length} instructions...`);
+      console.log(`🔨 Building V2 transaction ${i + 1}/${chunks.length} with ${chunk.length} instructions...`);
       
       try {
+        // ⚠️ TEMPORARY: Use hybrid V2 transaction building (legacy instructions + V2 RPC)
+        // The legacy instructions from generateWSOLATAForKeypairsV2 need to be converted to pure V2 format
+        // For now, we'll use buildTxnV2 which handles legacy instruction compatibility
         const transaction = await buildTxnV2(config, chunk);
         transactions.push(transaction);
-        console.log(`✅ Transaction ${i + 1} built successfully`);
+        console.log(`✅ V2 transaction ${i + 1} built successfully (legacy instruction compatibility)`);
         
       } catch (error) {
-        console.error(`❌ Error building transaction ${i + 1}:`, error);
+        console.error(`❌ Error building V2 transaction ${i + 1}:`, error);
         throw error;
       }
     }
     
-    console.log(`🎉 Built ${transactions.length} WSOL ATA transactions successfully!`);
+    console.log(`🎉 Built ${transactions.length} WSOL ATA transactions with hybrid V2 patterns (V2 RPC + legacy instruction compatibility)!`);
     return transactions;
     
   } catch (error) {
-    console.error('❌ Error in V2 WSOL ATA workflow:', error);
+    console.error('❌ Error in hybrid V2 WSOL ATA workflow:', error);
     throw error;
   }
 }
@@ -531,15 +537,6 @@ export async function buildWSOLATATransactionsV2(
  * - Returns structured results instead of side effects
  * - Configurable parameters with sensible defaults
  * 
- * Key improvements from V1:
- * - ❌ V1: Global keypairWSOLATAIxs array + file I/O side effects
- * - ✅ V2: Returns transaction array + optional file writing
- * - ❌ V1: Hardcoded file paths and prompt-based input
- * - ✅ V2: Configurable parameters and structured input
- * - ❌ V1: Uses legacy AddressLookupTableProgram
- * - ✅ V2: Will use @solana-program/address-lookup-table (future)
- * - ❌ V1: Process exit on errors
- * - ✅ V2: Proper error throwing and handling
  * 
  * @param config - AppConfigV2 instance with V2 signers and configuration
  * @param jitoTipAmount - Jito tip amount in SOL (default: 0)

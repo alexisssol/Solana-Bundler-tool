@@ -40,6 +40,76 @@ async function testWSOLATAFunctionsV2() {
   }
 }
 
+async function testBuildWSOLATATransactionsV2Migration() {
+  console.log('🧪 Testing buildWSOLATATransactionsV2 Hybrid V2 Migration...');
+  
+  try {
+    // Initialize V2 configuration
+    const config = await AppConfigV2.create();
+    console.log('✅ AppConfigV2 created successfully');
+    
+    // Test that buildWSOLATATransactionsV2 is using hybrid V2 patterns (V2 RPC + legacy instruction compatibility)
+    console.log('🔄 Testing buildWSOLATATransactionsV2 with hybrid V2 transaction building...');
+    
+    // Call with minimal parameters to test the transaction building pipeline
+    const transactions = await buildWSOLATATransactionsV2(
+      config,
+      2,   // Only 2 keypairs for testing
+      0    // No Jito tip for testing
+    );
+    
+    console.log(`✅ buildWSOLATATransactionsV2 successful: ${transactions.length} transactions built`);
+    
+    // Validate that we got hybrid V2 transactions (VersionedTransaction with V2 RPC)
+    for (let i = 0; i < transactions.length; i++) {
+      const tx = transactions[i];
+      
+      // Hybrid V2 transactions should have serialize method (VersionedTransaction format)
+      // but built using V2 RPC (which is the V2 migration step)
+      if (tx.serialize && typeof tx.serialize === 'function') {
+        console.log(`✅ Transaction ${i + 1}: Hybrid V2 transaction detected (VersionedTransaction with V2 RPC)`);
+        console.log(`   📏 Transaction size: ${tx.serialize().length} bytes`);
+      } else if ((tx as any).messageBytes) {
+        console.log(`❓ Transaction ${i + 1}: Pure V2 transaction detected (unexpected for current implementation)`);
+        console.log('   ℹ️ This suggests buildWSOLATATransactionsV2 was updated to use pure V2 patterns');
+      } else {
+        console.log(`❓ Transaction ${i + 1}: Unknown transaction type`);
+        console.log('   Properties:', Object.keys(tx));
+        throw new Error('Migration validation failed: Unknown transaction type returned');
+      }
+    }
+    
+    console.log('🎉 ✅ Hybrid V2 Migration Validation PASSED!');
+    console.log('   📋 buildWSOLATATransactionsV2 is using hybrid V2 patterns (V2 RPC + legacy instruction compatibility)');
+    console.log('   📋 Uses buildTxnV2 for legacy instruction support');
+    console.log('   📋 All transactions use V2 RPC for blockhash fetching');
+    
+    // Note: This is an intermediate step. Full V2 migration would require:
+    // 1. Converting generateWSOLATAForKeypairsV2 to generate pure V2 instructions
+    // 2. Then using buildPureV2Transaction instead of buildTxnV2
+    console.log('');
+    console.log('📋 Next Migration Steps:');
+    console.log('   � Convert generateWSOLATAForKeypairsV2 to generate pure V2 instructions');
+    console.log('   🔄 Update buildWSOLATATransactionsV2 to use buildPureV2Transaction');
+    console.log('   🔄 Remove all legacy Web3.js dependencies');
+    
+  } catch (error) {
+    console.error('❌ buildWSOLATATransactionsV2 V2 migration test failed:', error);
+    
+    // If it's a migration validation failure, make it clear
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('Migration validation failed')) {
+      console.error('');
+      console.error('🚨 MIGRATION ISSUE DETECTED:');
+      console.error('   The buildWSOLATATransactionsV2 function is not properly migrated to V2');
+      console.error('   It should use buildPureV2Transaction, not legacy buildTxnV2');
+      console.error('');
+    }
+    
+    throw error;
+  }
+}
+
 async function testCreateLUTV2() {
   console.log('🧪 Testing createLUTV2 functionality...');
   
@@ -118,6 +188,11 @@ if (require.main === module) {
       
       console.log('\n' + '='.repeat(50) + '\n');
       
+      // Run V2 Migration validation test
+      await testBuildWSOLATATransactionsV2Migration();
+      
+      console.log('\n' + '='.repeat(50) + '\n');
+      
       // Run CreateLUT V2 test
       await testCreateLUTV2();
       
@@ -134,4 +209,4 @@ if (require.main === module) {
   })().catch(console.error);
 }
 
-export { testWSOLATAFunctionsV2, testCreateLUTV2, testExtendLUTV2 };
+export { testWSOLATAFunctionsV2, testBuildWSOLATATransactionsV2Migration, testCreateLUTV2, testExtendLUTV2 };

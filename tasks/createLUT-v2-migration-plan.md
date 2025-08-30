@@ -3,55 +3,96 @@
 ## 📋 Overview
 Migrate `createLUT.ts` from Solana Web3.js v1 to Solana Kit V2 patterns, following the successful pattern established in `jitoPoolV2.ts`.
 
-## � **CRITICAL: Web3.js Dependencies Still In Use**
+## ✅ **PROGRESS UPDATE: Priority 2 Transaction Building Completed!**
 
-**Current Status**: `createLUTV2.ts` is still heavily dependent on `@solana/web3.js` and needs complete migration to Solana Kit V2.
+**Current Status**: Priority 2 migration COMPLETED! `createLUTV2.ts` now uses pure V2 transaction building patterns with `buildPureV2Transaction()` and eliminates the hybrid approach.
 
-### ❌ **Immediate Migration Required - Web3.js Dependencies**
+### ✅ **COMPLETED: Priority 1 - Address Lookup Table Operations**
+- ✅ **LUT Instruction Migration**: Migrated from `AddressLookupTableProgram` to `@solana-program/address-lookup-table`
+- ✅ **V2 LUT Creation**: `getCreateLookupTableInstructionAsync()` with proper address derivation
+- ✅ **V2 LUT Extension**: `getExtendLookupTableInstruction()` with chunking and batch processing
+- ✅ **Integration**: Added to main.ts menu system with `createLUTHandler()`
+- ✅ **Testing**: Comprehensive test suite in `testCreateLUTV2.ts`
 
-#### 1. **Transaction Building (CRITICAL)**
+### ✅ **COMPLETED: Priority 2 - Transaction Building Migration**
+- ✅ **Pure V2 Transaction Building**: `buildPureV2Transaction()` with proper V2 message flow
+- ✅ **V2 Message Building**: Uses `createTransactionMessage()`, `setTransactionMessageFeePayer()`, `setTransactionMessageLifetimeUsingBlockhash()`, `appendTransactionMessageInstructions()`
+- ✅ **V2 Transaction Compilation**: Uses `compileTransaction()` from `@solana/transactions`
+- ✅ **createLUTTransactionV2()**: Migrated to pure V2 patterns
+- ✅ **extendLUTV2()**: Migrated to pure V2 patterns
+- ✅ **Hybrid Cleanup**: Removed `convertV2InstructionToLegacy()` compatibility layer
+- ✅ **Mixed Transaction Validation**: Handles both V2 (.messageBytes) and legacy (.serialize()) transactions
+
+### 🚧 **NEXT: Priority 3 - WSOL ATA Functions Migration**
+
+The WSOL ATA functions (`generateWSOLATAForKeypairsV2`, `buildWSOLATATransactionsV2`) still use the legacy `buildTxnV2()` function which has hybrid V2/legacy transaction building. These need to be migrated to use pure V2 patterns.
+
+#### 1. **WSOL ATA Transaction Building (CRITICAL)**
 ```typescript
-// ❌ CURRENT: Legacy Web3.js transaction building
-import { 
-  VersionedTransaction,
-  TransactionInstruction,
-  TransactionMessage as LegacyTransactionMessage 
-} from '@solana/web3.js';
+// ❌ CURRENT: WSOL ATA functions still use legacy buildTxnV2()
+export async function buildWSOLATATransactionsV2(config: AppConfigV2, maxKeypairs: number = 27, jitoTipAmount: number = 0): Promise<VersionedTransaction[]> {
+  const instructions = await generateWSOLATAForKeypairsV2(config, maxKeypairs, true);
+  const chunks = await chunkWSOLATAInstructionsV2(config, instructions, 10, jitoTipAmount);
+  
+  const transactions: VersionedTransaction[] = [];
+  for (const chunk of chunks) {
+    const transaction = await buildTxnV2(config, chunk); // ❌ Still using legacy hybrid approach
+    transactions.push(transaction);
+  }
+  return transactions;
+}
 
-const message = new LegacyTransactionMessage({
-  payerKey: walletKeypair.publicKey,
-  recentBlockhash: blockhash,
-  instructions: [createLUTInstruction],
-}).compileToV0Message([]);
-
-const createLUTTx = new VersionedTransaction(message);
+// ✅ REQUIRED: Pure V2 transaction building for WSOL ATA functions
+export async function buildWSOLATATransactionsV2(config: AppConfigV2, maxKeypairs: number = 27, jitoTipAmount: number = 0): Promise<any[]> {
+  const instructions = await generateWSOLATAForKeypairsV2(config, maxKeypairs, true);
+  const chunks = await chunkWSOLATAInstructionsV2(config, instructions, 10, jitoTipAmount);
+  
+  const transactions: any[] = [];
+  for (const chunk of chunks) {
+    const transaction = await buildPureV2Transaction(config, chunk); // ✅ Use pure V2 transaction building
+    transactions.push(transaction);
+  }
+  return transactions;
+}
 ```
 
+#### 2. **SPL Token Program Migration (CRITICAL)**
 ```typescript
-// ✅ REQUIRED: Solana Kit V2 transaction building
-import { 
-  createTransactionMessage,
-  appendTransactionMessageInstructions,
-  setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash,
-  pipe,
-  compileTransaction
-} from '@solana/kit';
+// ❌ CURRENT: Legacy SPL Token imports in generateWSOLATAForKeypairsV2()
+import * as spl from '@solana/spl-token';
 
-const transactionMessage = pipe(
-  createTransactionMessage({ version: 0 }),
-  (tx) => setTransactionMessageFeePayerSigner(payerSigner, tx),
-  (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-  (tx) => appendTransactionMessageInstructions([createLUTInstruction], tx)
+const createWSOLATA = spl.createAssociatedTokenAccountIdempotentInstruction(
+  new PublicKey(config.payer.address),
+  ataAddress,
+  new PublicKey(keypair.address),
+  WSOL_MINT_ADDRESS
 );
 
-const transaction = compileTransaction(transactionMessage);
+// ✅ REQUIRED: V2 Token Program patterns
+import { getCreateAssociatedTokenAccountIdempotentInstruction } from '@solana-program/token';
+
+const createWSOLATA = getCreateAssociatedTokenAccountIdempotentInstruction({
+  payer: config.payer,
+  associatedTokenAccount: ataAddress,
+  owner: keypairV2,
+  mint: WSOL_MINT_ADDRESS,
+});
 ```
 
-#### 2. **Address Lookup Table Operations (CRITICAL)**
+#### 3. **Instruction Type Consistency (CRITICAL)**
 ```typescript
-// ❌ CURRENT: Legacy Web3.js LUT operations
-import { AddressLookupTableProgram, PublicKey } from '@solana/web3.js';
+// ❌ CURRENT: Mixed instruction types in generateWSOLATAForKeypairsV2()
+const instructions: TransactionInstruction[] = []; // Legacy type
+// ... V2 instructions added to legacy array
+
+// ✅ REQUIRED: Pure V2 instruction types
+const instructions: any[] = []; // V2 instruction type
+// ... only V2 instructions
+```
+
+### 🚧 **NEXT: Priority 4 - Jito Tip Integration**
+
+Currently, Jito tips are disabled in `extendLUTV2()` due to instruction type mixing issues. This needs to be resolved with proper V2 System Program integration.
 
 const [createLUTInstruction, lutAddress] = AddressLookupTableProgram.createLookupTable({
   authority: walletKeypair.publicKey,
@@ -228,37 +269,34 @@ const keyInfoPath = path.join(__dirname, 'keyInfo.json'); // V1 file
 ```
 **Issue**: Wrong file path for V2 (should be `keyInfoV2.json`)
 
-## 📊 Migration Phases
+## 📊 Migration Phases - UPDATED STATUS
 
-### Phase 1: Import & Configuration Migration
-- [ ] Replace all Web3.js v1 imports with Solana Kit V2
-- [ ] Update configuration from `AppConfig` to `AppConfigV2`
-- [ ] Replace `connection` with `config.rpc`
-- [ ] Update file paths to V2 structure
+### ✅ Phase 1: LUT Operations Migration (COMPLETED)
+- ✅ Replace AddressLookupTableProgram with @solana-program/address-lookup-table
+- ✅ Implement V2 LUT creation with getCreateLookupTableInstructionAsync()
+- ✅ Implement V2 LUT extension with getExtendLookupTableInstruction()
+- ✅ Add hybrid V2/legacy compatibility layer for transaction building
+- ✅ Integrate with main.ts menu system
+- ✅ Comprehensive testing with valid addresses
 
-### Phase 2: Type System Migration
-- [ ] Replace `Keypair` with `KeyPairSigner` 
-- [ ] Replace `PublicKey` with `Address`
-- [ ] Update RPC calls to V2 patterns
-- [ ] Handle legacy compatibility for LUT operations
+### 🚧 Phase 2: Transaction Building Migration (CURRENT PRIORITY)
+- [ ] Replace legacy TransactionMessage with V2 createTransactionMessage
+- [ ] Replace VersionedTransaction with V2 Transaction building
+- [ ] Migrate to V2 instruction appending patterns
+- [ ] Update signing flow to use V2 KeyPairSigner patterns
+- [ ] Remove convertV2InstructionToLegacy() compatibility layer
 
-### Phase 3: Function Updates
-- [ ] Migrate `createLUT()` function
-- [ ] Migrate `extendLUT()` function 
-- [ ] Update keypair loading to `loadKeypairsV2()`
-- [ ] Fix file output to `keyInfoV2.json`
+### 🔄 Phase 3: Type System & Configuration Migration
+- [ ] Replace PublicKey references with Address types
+- [ ] Update RPC calls to pure V2 patterns (remove hybrid approach)
+- [ ] Migrate WSOL ATA operations to pure V2 (@solana-program/token)
+- [ ] Update file I/O to V2 patterns
 
-### Phase 4: Security & Quality Improvements
-- [ ] Replace suspicious hardcoded addresses
-- [ ] Add proper error handling
-- [ ] Improve logging and user feedback
-- [ ] Add transaction size validation
-
-### Phase 5: Performance Optimizations
-- [ ] Optimize account chunking logic
-- [ ] Add parallel processing where possible
-- [ ] Implement retry mechanisms
-- [ ] Add progress indicators
+### 🎯 Phase 4: System Program & Final Cleanup
+- [ ] Replace SystemProgram.transfer with getTransferSolInstruction
+- [ ] Remove all @solana/web3.js imports
+- [ ] Performance optimization and validation
+- [ ] Final testing and documentation
 
 ## 🎯 Specific Issues to Address
 
@@ -426,14 +464,111 @@ keypairs/
 - [ ] User acceptance testing
 - [ ] Clean up V1 dependencies
 
-## 🏁 Next Steps
+## � IMMEDIATE NEXT TASKS
 
-1. **Start with Phase 1**: Import and configuration migration
-2. **Implement createLUTV2**: Core functionality first
-3. **Add extendLUTV2**: Extension functionality
-4. **Quality improvements**: Address all identified issues
-5. **Testing & validation**: Comprehensive testing suite
+### **Priority 3: WSOL ATA Functions Migration (CURRENT FOCUS)**
 
-**Estimated Timeline**: 2-3 days for complete migration with testing
+The WSOL ATA functions still use the legacy `buildTxnV2()` which has hybrid V2/legacy patterns. We need to migrate these to pure V2.
 
-**Priority**: High - Required for complete V2 ecosystem
+#### **Task 3.1: Update buildWSOLATATransactionsV2() to use Pure V2**
+**File**: `src/coreV2/createLUTV2.ts`
+**Status**: 🔴 URGENT - Currently uses legacy `buildTxnV2()`
+
+```typescript
+// ❌ CURRENT: Line ~517 in createLUTV2.ts
+const transaction = await buildTxnV2(config, chunk);
+
+// ✅ TARGET: Replace with pure V2 transaction building
+const transaction = await buildPureV2Transaction(config, chunk);
+```
+
+#### **Task 3.2: Migrate generateWSOLATAForKeypairsV2() to Pure V2 Token Program**
+**File**: `src/coreV2/createLUTV2.ts`
+**Status**: 🔴 URGENT - Still uses legacy SPL Token instructions
+
+**Required Changes**:
+1. Replace `import * as spl from '@solana/spl-token'` with `@solana-program/token`
+2. Replace `TransactionInstruction[]` return type with V2 instruction type
+3. Update ATA creation to use V2 patterns
+
+#### **Task 3.3: Fix Instruction Type Consistency**
+**File**: `src/coreV2/createLUTV2.ts`
+**Status**: 🔴 URGENT - Mixed instruction types causing compilation issues
+
+**Required Changes**:
+1. Update all function signatures to use consistent V2 instruction types
+2. Remove legacy `TransactionInstruction` import dependencies
+3. Ensure all generated instructions are V2 compatible
+
+### **Priority 4: Jito Tip Integration (HIGH)**
+
+Currently disabled in `extendLUTV2()` due to instruction type mixing. Need to implement proper V2 System Program patterns.
+
+#### **Task 4.1: Implement V2 Jito Tips**
+**File**: `src/coreV2/createLUTV2.ts`
+**Status**: 🟡 BLOCKED - Currently commented out due to type mixing
+
+```typescript
+// ✅ TARGET: Implement pure V2 Jito tip integration
+import { getTransferSolInstruction } from '@solana-program/system';
+
+const tipInstruction = getTransferSolInstruction({
+  source: config.payer,
+  destination: address(randomTipAccount),
+  amount: lamports(jitoTipAmount),
+});
+```
+
+### **Priority 5: Final Cleanup (MEDIUM)**
+
+#### **Task 5.1: Remove All Legacy Dependencies**
+**Files**: `src/coreV2/createLUTV2.ts`
+**Status**: 🟡 CLEANUP - Remove remaining Web3.js imports
+
+**Required Changes**:
+1. Remove `import { VersionedTransaction, TransactionInstruction, AddressLookupTableAccount } from '@solana/web3.js'`
+2. Remove `buildTxnV2()` and `buildSimpleTxnV2()` functions (legacy compatibility)
+3. Update all return types to use pure V2 patterns
+
+#### **Task 5.2: Complete Type System Migration**
+**Files**: All V2 files
+**Status**: 🟡 CLEANUP - Ensure pure V2 types throughout
+
+**Required Changes**:
+1. Replace any remaining `PublicKey` references with `Address`
+2. Update all RPC calls to pure V2 patterns
+3. Ensure all signing uses V2 `KeyPairSigner` patterns
+- Remove all `import { ... } from '@solana/web3.js'` statements
+- Remove `convertV2InstructionToLegacy()` compatibility function
+- Update all remaining `PublicKey` references to `Address`
+
+#### **Task 5.2: Update AppConfigV2 Integration**
+- Ensure all RPC calls use `config.rpc` instead of legacy connection
+- Update all signing to use `config.payer` KeyPairSigner
+- Remove any remaining legacy keypair handling
+
+## 🚀 **IMPLEMENTATION ORDER**
+
+### **Week 1: Core Transaction Building**
+1. **Day 1-2**: Install V2 packages and update imports
+2. **Day 3-4**: Replace buildTxnV2() with pure V2 transaction building
+3. **Day 5**: Update signing flow and test basic functionality
+
+### **Week 2: System & Token Program Migration**  
+1. **Day 1-2**: Replace SystemProgram with @solana-program/system
+2. **Day 3-4**: Migrate WSOL ATA operations to @solana-program/token
+3. **Day 5**: Integration testing and validation
+
+### **Week 3: Final Polish**
+1. **Day 1-2**: Remove all Web3.js dependencies
+2. **Day 3-4**: Performance optimization and error handling
+3. **Day 5**: Comprehensive testing and documentation
+
+## ✅ **SUCCESS METRICS**
+
+- [ ] Zero imports from `@solana/web3.js`
+- [ ] All instructions use V2 program packages
+- [ ] All transactions built with V2 patterns  
+- [ ] All tests pass with V2 implementation
+- [ ] Performance matches or exceeds V1 implementation
+- [ ] Main.ts integration works seamlessly
