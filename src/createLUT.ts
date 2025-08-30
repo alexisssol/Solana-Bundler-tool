@@ -56,7 +56,7 @@ export async function extendLUT() {
     // These values vary based on the new market created
     accounts.push(
         RayLiqPoolv4,
-        new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), // token program
+        new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), // token program, james: suspicius address
         keys.id, // amm id  writable
         keys.authority, // amm authority
         keys.openOrders, // amm open orders  writable

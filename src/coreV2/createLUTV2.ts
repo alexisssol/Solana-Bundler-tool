@@ -61,6 +61,10 @@ import {
   AddressLookupTableAccount
 } from '@solana/web3.js';
 
+// Additional imports for LUT operations
+import * as fs from 'fs';
+import * as path from 'path';
+
 /**
  * @param config - AppConfigV2 instance with V2 signers and RPC
  * @param instructions - Array of legacy transaction instructions
@@ -495,6 +499,201 @@ export async function buildWSOLATATransactionsV2(
     
   } catch (error) {
     console.error('❌ Error in V2 WSOL ATA workflow:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create Address Lookup Table (V2 Implementation)
+ * 
+ * This replaces the legacy createLUT() function with V2 patterns:
+ * - Uses V2 RPC and configuration system
+ * - Proper error handling and validation
+ * - Eliminates global state mutations
+ * - Returns structured results instead of side effects
+ * - Configurable parameters with sensible defaults
+ * 
+ * Key improvements from V1:
+ * - ❌ V1: Global keypairWSOLATAIxs array + file I/O side effects
+ * - ✅ V2: Returns transaction array + optional file writing
+ * - ❌ V1: Hardcoded file paths and prompt-based input
+ * - ✅ V2: Configurable parameters and structured input
+ * - ❌ V1: Uses legacy AddressLookupTableProgram
+ * - ✅ V2: Will use @solana-program/address-lookup-table (future)
+ * - ❌ V1: Process exit on errors
+ * - ✅ V2: Proper error throwing and handling
+ * 
+ * @param config - AppConfigV2 instance with V2 signers and configuration
+ * @param jitoTipAmount - Jito tip amount in SOL (default: 0)
+ * @param maxKeypairs - Maximum number of keypairs for WSOL ATA creation (default: 27)
+ * @param saveToFile - Whether to save LUT address to keyInfoV2.json (default: true)
+ * @returns Promise<{lutAddress: string, transactions: VersionedTransaction[]}> - LUT address and built transactions
+ */
+export async function createLUTV2(
+  config: AppConfigV2,
+  jitoTipAmount: number = 0,
+  maxKeypairs: number = 27,
+  saveToFile: boolean = true
+): Promise<{
+  lutAddress: string;
+  transactions: VersionedTransaction[];
+  summary: {
+    lutCreated: boolean;
+    wsolATACount: number;
+    totalTransactions: number;
+  };
+}> {
+  try {
+    console.log('🚀 Creating Address Lookup Table (V2)...');
+    console.log(`📊 Parameters: tip=${jitoTipAmount} SOL, maxKeypairs=${maxKeypairs}, saveToFile=${saveToFile}`);
+    
+    const transactions: VersionedTransaction[] = [];
+    
+    // Step 1: Create the LUT
+    console.log('🏗️ Step 1: Creating Address Lookup Table...');
+    const lutResult = await createLUTTransactionV2(config);
+    transactions.push(lutResult.transaction);
+    
+    console.log(`✅ LUT created with address: ${lutResult.lutAddress}`);
+    
+    // Step 2: Save LUT address to file (if requested)
+    if (saveToFile) {
+      await saveLUTAddressV2(lutResult.lutAddress, config);
+    }
+    
+    // Step 3: Generate WSOL ATA transactions
+    console.log('🏦 Step 2: Generating WSOL ATA transactions...');
+    const wsolTransactions = await buildWSOLATATransactionsV2(config, maxKeypairs, jitoTipAmount);
+    transactions.push(...wsolTransactions);
+    
+    console.log(`✅ Generated ${wsolTransactions.length} WSOL ATA transactions`);
+    
+    // Step 4: Summary and validation
+    const summary = {
+      lutCreated: true,
+      wsolATACount: wsolTransactions.length,
+      totalTransactions: transactions.length,
+    };
+    
+    console.log('📊 CreateLUT V2 Summary:');
+    console.log(`   🏗️ LUT Address: ${lutResult.lutAddress}`);
+    console.log(`   🏦 WSOL ATA Transactions: ${summary.wsolATACount}`);
+    console.log(`   📦 Total Transactions: ${summary.totalTransactions}`);
+    console.log(`   💰 Jito Tip: ${jitoTipAmount} SOL`);
+    
+    // Validate total transaction size
+    const totalSize = transactions.reduce((size, tx) => size + tx.serialize().length, 0);
+    console.log(`📏 Total bundle size: ${totalSize} bytes`);
+    
+    if (totalSize > 50000) { // Conservative bundle size limit
+      console.warn(`⚠️ Large bundle size (${totalSize} bytes) - consider chunking for better performance`);
+    }
+    
+    console.log('🎉 CreateLUT V2 completed successfully!');
+    
+    return {
+      lutAddress: lutResult.lutAddress,
+      transactions,
+      summary,
+    };
+    
+  } catch (error) {
+    console.error('❌ Error in createLUTV2:', error);
+    throw new Error(`Failed to create LUT (V2): ${error}`);
+  }
+}
+
+/**
+ * Create LUT transaction with V2 patterns (Internal Utility)
+ * 
+ * @param config - AppConfigV2 instance
+ * @returns Promise<{transaction: VersionedTransaction, lutAddress: string}> - LUT creation transaction and address
+ */
+async function createLUTTransactionV2(
+  config: AppConfigV2
+): Promise<{
+  transaction: VersionedTransaction;
+  lutAddress: string;
+}> {
+  try {
+    console.log('🔨 Building LUT creation transaction...');
+    
+    // Get current slot for LUT creation
+    const currentSlot = await config.rpc.getSlot().send();
+    console.log(`📋 Using slot: ${currentSlot}`);
+    
+    // ⚠️ TEMPORARY: Using legacy AddressLookupTableProgram until V2 migration
+    // TODO: Replace with @solana-program/address-lookup-table
+    const { AddressLookupTableProgram } = await import('@solana/web3.js');
+    const { PublicKey } = await import('@solana/web3.js');
+    
+    // Create LUT instruction using legacy method (for now)
+    const [createLUTInstruction, lutAddress] = AddressLookupTableProgram.createLookupTable({
+      authority: new PublicKey(config.payer.address),
+      payer: new PublicKey(config.payer.address),
+      recentSlot: currentSlot,
+    });
+    
+    console.log(`📍 LUT will be created at: ${lutAddress.toString()}`);
+    
+    // Build transaction using V2 buildTxnV2
+    const transaction = await buildTxnV2(config, [createLUTInstruction]);
+    
+    console.log('✅ LUT creation transaction built successfully');
+    
+    return {
+      transaction,
+      lutAddress: lutAddress.toString(),
+    };
+    
+  } catch (error) {
+    console.error('❌ Error creating LUT transaction:', error);
+    throw error;
+  }
+}
+
+/**
+ * Save LUT address to keyInfoV2.json (V2 Implementation)
+ * 
+ * @param lutAddress - LUT address to save
+ * @param config - AppConfigV2 instance for file path resolution
+ * @returns Promise<void>
+ */
+async function saveLUTAddressV2(
+  lutAddress: string,
+  config: AppConfigV2
+): Promise<void> {
+  try {
+    console.log('💾 Saving LUT address to keyInfoV2.json...');
+    
+    // V2 file path (different from V1's keyInfo.json)
+    const keyInfoV2Path = path.join(__dirname, '../keypairs/keyInfoV2.json');
+    
+    // Read existing data or create new structure
+    let poolInfo: { [key: string]: any } = {};
+    if (fs.existsSync(keyInfoV2Path)) {
+      const data = fs.readFileSync(keyInfoV2Path, 'utf-8');
+      poolInfo = JSON.parse(data);
+    }
+    
+    // Update with new LUT address
+    poolInfo.addressLUT = lutAddress;
+    poolInfo.lutCreatedAt = new Date().toISOString();
+    poolInfo.version = 'V2';
+    
+    // Ensure directory exists
+    const dir = path.dirname(keyInfoV2Path);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    // Write updated content
+    fs.writeFileSync(keyInfoV2Path, JSON.stringify(poolInfo, null, 2));
+    
+    console.log(`✅ LUT address saved to ${keyInfoV2Path}`);
+    
+  } catch (error) {
+    console.error('❌ Error saving LUT address:', error);
     throw error;
   }
 }

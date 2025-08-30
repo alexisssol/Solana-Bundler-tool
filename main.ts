@@ -2,9 +2,9 @@
 //import { buyBundle } from "./src/jitoPool";
 import { createKeypairsV2 as createKeypairs} from './src/coreV2/createKeysV2'
 import { buyBundleV2 as buyBundle } from './src/coreV2/jitoPoolV2'
-import { sender } from "./src/senderUI";
-import { createWalletSells, sellXPercentage } from "./src/sellFunc";
-import { remove } from "./src/removeLiq";
+// import { sender } from "./src/senderUI";
+// import { createWalletSells, sellXPercentage } from "./src/sellFunc";
+// import { remove } from "./src/removeLiq";
 import promptSync from "prompt-sync";
 
 const prompt = promptSync();
@@ -31,19 +31,19 @@ async function main() {
 				await createKeypairs();
 				break;
 			case "2":
-				await sender();
+				// await sender();
 				break;
 			case "3":
 				await buyBundle();
 				break;
 			case "4":
-				await createWalletSells();
+				// await createWalletSells();
 				break;
 			case "5":
-				await sellXPercentage();
+				// await sellXPercentage();
 				break;
 			case "6":
-				await remove();
+				// await remove();
 				break;
 			case "exit":
 				running = false;

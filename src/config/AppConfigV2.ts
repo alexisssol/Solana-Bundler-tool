@@ -107,8 +107,8 @@ export class AppConfigV2 {
     const rpcSubscriptions = createSolanaRpcSubscriptions(wsUrl);
 
     // Load keypairs from environment variables
-    const wallet = await AppConfigV2.loadKeypairFromEnv('POOL_CREATOR_PRIVATE_KEY');
-    const payer = await AppConfigV2.loadKeypairFromEnv('FEE_PAYER_PRIVATE_KEY');
+    const wallet = await AppConfigV2.loadKeypairFromEnv('POOL_CREATOR_PRIVATE_KEY_64');
+    const payer = await AppConfigV2.loadKeypairFromEnv('FEE_PAYER_PRIVATE_KEY_64');
 
     return new AppConfigV2(rpcUrl, rpc, rpcSubscriptions, wallet, payer);
   }

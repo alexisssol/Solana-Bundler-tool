@@ -15,7 +15,7 @@ const GEYSER_URL = configV2.get('geyser_url');
 const GEYSER_ACCESS_TOKEN = configV2.get('geyser_access_token');
 
 // Validation
-if (!BLOCK_ENGINE_URLS || BLOCK_ENGINE_URLS.length === 0) {
+if (!BLOCK_ENGINE_URLS) {
   throw new Error('Block engine URLs not configured');
 }
 
@@ -30,8 +30,26 @@ const secretKeyArray = JSON.parse(
 const secretKeyBytes = new Uint8Array(secretKeyArray);
 
 // Create both V2 and legacy keypairs
-export const authKeypairV2: KeyPairSigner = createKeyPairSignerFromBytes(secretKeyBytes);
+// Create legacy keypair synchronously
 export const authKeypairLegacy: Keypair = Keypair.fromSecretKey(secretKeyBytes);
+
+// Create V2 keypair (async)
+let authKeypairV2: KeyPairSigner;
+
+// Initialize V2 keypair asynchronously
+const initializeV2Keypair = async () => {
+  authKeypairV2 = await createKeyPairSignerFromBytes(secretKeyBytes);
+  console.log(`🔑 Auth keypair address: ${authKeypairV2.address}`);
+};
+
+// Export the initialization function and a getter for the V2 keypair
+export { initializeV2Keypair };
+export const getAuthKeypairV2 = () => {
+  if (!authKeypairV2) {
+    throw new Error('V2 keypair not initialized. Call initializeV2Keypair() first.');
+  }
+  return authKeypairV2;
+};
 
 // Initialize searcher clients
 export const searcherClients: SearcherClient[] = BLOCK_ENGINE_URLS.map(url => 
@@ -51,11 +69,9 @@ export const geyserClient = jitoGeyserClient(GEYSER_URL, GEYSER_ACCESS_TOKEN, {
 // Log successful initialization
 console.log('✅ Jito clients initialized successfully (Solana Kit V2)');
 console.log(`🔗 Connected to ${BLOCK_ENGINE_URLS.length} block engine(s)`);
-console.log(`🔑 Auth keypair address: ${authKeypairV2.address}`);
 
 // Export everything for easy access
 export {
-  authKeypairV2 as authKeypair,
   searcherClient as defaultSearcherClient,
   searcherClients as allSearcherClients,
   geyserClient as defaultGeyserClient

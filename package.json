@@ -16,10 +16,9 @@
 		"test": "jest",
 		"test:unit": "jest tests/unit",
 		"test:integration": "jest tests/integration",
-		"test:migration": "jest tests/migration",
-		"test:performance": "jest tests/performance",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
+		"test:createLUTV2": "ts-node src/coreV2/testCreateLUTV2.ts",
 		"benchmark": "node tests/performance/*.benchmark.js"
 	},
 	"author": "https://t.me/benorizz0/",
