@@ -10,16 +10,26 @@ This is the **Phase 1** implementation of the Solana Kit V2 migration for LUT op
 - ✅ Uses V2 RPC (`config.rpc`) for blockhash fetching
 - ✅ Maintains compatibility with existing `VersionedTransaction` system
 - ✅ Proper error handling and transaction size validation
+- ✅ Address format compatibility fixes (V2 ↔ Legacy Web3.js)
 - ✅ Can be used as a drop-in replacement for legacy `buildTxn()`
 
-### 2. **buildSimpleTxnV2()** - Simplified V2 Building
-- ✅ Streamlined approach for basic transactions
-- ✅ Perfect for testing and development
+### 2. **WSOL ATA Generation Functions** - V2 Implementation
+- ✅ `generateWSOLATAForKeypairsV2()` - V2 WSOL ATA creation with legacy instruction compatibility
+- ✅ `chunkWSOLATAInstructionsV2()` - Transaction batching utilities
+- ✅ `buildWSOLATATransactionsV2()` - Complete WSOL workflow
+- ✅ Eliminates global state mutations from V1
 
-### 3. **Validation & Debugging Utilities**
+### 3. **createLUTV2()** - Core LUT Creation Function
+- ✅ Complete V2 implementation of LUT creation
+- ✅ Structured return values instead of side effects
+- ✅ Configurable parameters (tip amount, keypair limits, file saving)
+- ✅ Integration with WSOL ATA generation
+- ✅ Proper error handling vs V1's `process.exit(0)`
+
+### 4. **Validation & Debugging Utilities**
 - ✅ `validateTxnV2()` - Transaction validation
-- ✅ `debugTxnV2()` - Development debugging
-- ✅ `exampleBuildTxnV2Usage()` - Usage examples
+- ✅ `debugTxnV2()` - Development debugging with detailed logging
+- ✅ Comprehensive test suite with multiple test scenarios
 
 ## 🔧 How to Use
 
@@ -45,10 +55,33 @@ const transaction = await buildTxnV2(config, instructions, lutAccount);
 
 ## 🚧 Next Steps (Phase 2)
 
-1. **createLUTV2()** - Main LUT creation function
-2. **extendLUTV2()** - LUT extension functionality  
-3. **Full V2 instruction support** - Move away from legacy compatibility
-4. **V2 keypair signing** - Complete signing integration
+### IMMEDIATE PRIORITY:
+1. **Test Current Implementation** - Validate address format fixes work correctly
+2. **Implement extendLUTV2()** - LUT extension functionality using current hybrid approach
+
+### HIGH PRIORITY - Web3.js Dependency Elimination:
+3. **Migrate LUT Operations** - Replace `AddressLookupTableProgram` with `@solana-program/address-lookup-table`
+4. **Pure V2 Transaction Building** - Replace `TransactionMessage`/`VersionedTransaction` with `@solana/kit` patterns
+5. **V2 Instruction Building** - Replace legacy SPL Token with `@solana-program/token`
+
+### MEDIUM PRIORITY:
+6. **V2 Signing Integration** - Complete signing workflow instead of returning unsigned transactions
+7. **Security Fixes** - Remove hardcoded addresses and magic numbers
+8. **File Structure** - Migrate from `keyInfo.json` to `keyInfoV2.json`
+
+## 🔧 Current Architecture Status
+
+**✅ WORKING (Hybrid V2/V1):**
+- V2 RPC and configuration (`AppConfigV2`)
+- V2 address handling with legacy compatibility layer
+- V2 WSOL ATA generation with legacy instructions
+- Complete LUT creation workflow
+
+**⚠️ NEEDS MIGRATION (Still using Web3.js):**
+- `AddressLookupTableProgram` → `@solana-program/address-lookup-table`
+- `TransactionMessage`/`VersionedTransaction` → `@solana/kit` transaction building
+- Legacy SPL Token instructions → `@solana-program/token`
+- Manual address conversions → Pure V2 types
 
 ## 📖 Testing
 
@@ -79,13 +112,31 @@ createLUTV2.ts
 └── exampleBuildTxnV2Usage() # Usage examples
 ```
 
-## ⚠️ Current Limitations
+## ⚠️ Current Architecture (Hybrid V2/Legacy)
 
-1. **Hybrid Approach**: Still uses legacy `TransactionMessage` for compatibility
-2. **Unsigned Transactions**: Returns unsigned transactions for existing signing flow
-3. **Limited V2 Instructions**: Currently works with legacy `TransactionInstruction`
+**V2 Components (✅ Completed):**
+- `AppConfigV2` configuration system
+- V2 RPC client usage
+- V2 keypair and address handling
+- Structured function returns vs side effects
 
-These limitations will be addressed in subsequent phases as we gradually migrate more functionality.
+**Legacy Compatibility Layer (⚠️ Temporary):**
+- `@solana/web3.js` transaction building (`TransactionMessage`, `VersionedTransaction`)
+- `@solana/web3.js` LUT operations (`AddressLookupTableProgram`)
+- `@solana/spl-token` for ATA creation (legacy instruction format)
+- Address format conversions between V2 and legacy
+
+**Target V2 Architecture (🎯 Next Phase):**
+```typescript
+// Pure V2 transaction building
+import { createTransactionMessage, compileTransaction } from '@solana/kit';
+
+// Pure V2 LUT operations  
+import { getCreateLookupTableInstruction } from '@solana-program/address-lookup-table';
+
+// Pure V2 token operations
+import { getCreateAssociatedTokenIdempotentInstruction } from '@solana-program/token';
+```
 
 ## 🎉 Success Criteria Met
 

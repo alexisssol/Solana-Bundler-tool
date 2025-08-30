@@ -49,6 +49,12 @@ import {
   TOKEN_PROGRAM_ADDRESS,
 } from '@solana-program/token';
 
+import {
+  getCreateLookupTableInstructionAsync,
+  getExtendLookupTableInstruction,
+  findAddressLookupTablePda,
+} from '@solana-program/address-lookup-table';
+
 // V2 Configuration
 import { AppConfigV2 } from '../config/AppConfigV2';
 import { loadKeypairsV2 } from './createKeysV2';
@@ -86,9 +92,44 @@ export async function buildTxnV2(
     // Import legacy transaction building for compatibility
     const { TransactionMessage, PublicKey } = await import('@solana/web3.js');
     
+    // Convert V2 payer address to legacy PublicKey
+    // V2 addresses are base58 strings, so we can use them directly
+    let payerPublicKey: InstanceType<typeof PublicKey>;
+    try {
+      payerPublicKey = new PublicKey(config.payer.address);
+      console.log(`📋 Payer address: ${payerPublicKey.toString()}`);
+    } catch (error) {
+      console.error(`❌ Error converting payer address: ${config.payer.address}`, error);
+      throw new Error(`Invalid payer address format: ${config.payer.address}`);
+    }
+    
+    // Debug: Log instruction details to identify the problematic instruction
+    console.log(`🔍 Processing ${instructions.length} instructions:`);
+    for (let i = 0; i < instructions.length; i++) {
+      const ix = instructions[i];
+      console.log(`   Instruction ${i + 1}: ${ix.programId.toString()} (${ix.keys.length} keys)`);
+      
+      // Check each key in the instruction
+      for (let j = 0; j < ix.keys.length; j++) {
+        const key = ix.keys[j];
+        if (!key.pubkey) {
+          console.error(`❌ Instruction ${i + 1}, key ${j + 1}: pubkey is undefined`);
+          console.error(`   Key object:`, key);
+          throw new Error(`Invalid instruction key at position ${j} in instruction ${i + 1}`);
+        }
+        try {
+          key.pubkey.toString(); // Test if the pubkey is valid
+        } catch (error) {
+          console.error(`❌ Instruction ${i + 1}, key ${j + 1}: invalid pubkey format`, error);
+          console.error(`   Problematic key:`, key);
+          throw new Error(`Invalid pubkey format at position ${j} in instruction ${i + 1}`);
+        }
+      }
+    }
+    
     // Build transaction message using legacy approach with V2 data
     const message = new TransactionMessage({
-      payerKey: new PublicKey(config.payer.address),
+      payerKey: payerPublicKey,
       recentBlockhash: latestBlockhash.blockhash,
       instructions: instructions,
     }).compileToV0Message(lutAccount ? [lutAccount] : []);
@@ -226,45 +267,6 @@ export function debugTxnV2(
   }
 }
 
-/**
- * Example usage of buildTxnV2 - this shows how to use the V2 function
- * This can replace the legacy buildTxn calls in existing code
- * 
- * @param config - AppConfigV2 instance
- * @returns Promise<void>
- */
-export async function exampleBuildTxnV2Usage(config: AppConfigV2): Promise<void> {
-  try {
-    console.log('📖 Example: Building V2 transaction...');
-    
-    // Example: Create a simple transfer instruction
-    const transferInstruction = getTransferSolInstruction({
-      source: config.payer,
-      destination: address('11111111111111111111111111111111'),  // System program
-      amount: lamports(BigInt(1000)),  // 1000 lamports
-    });
-
-    // Convert V2 instruction to legacy format for compatibility
-    const { SystemProgram, PublicKey } = await import('@solana/web3.js');
-    const legacyTransferIx = SystemProgram.transfer({
-      fromPubkey: new PublicKey(config.payer.address),
-      toPubkey: new PublicKey('11111111111111111111111111111111'),
-      lamports: 1000,
-    });
-
-    // Build transaction using V2 patterns
-    const transaction = await buildTxnV2(config, [legacyTransferIx]);
-    
-    // Validate and debug
-    if (validateTxnV2(transaction, config)) {
-      debugTxnV2(transaction, 'Example Transaction');
-      console.log('✅ Example transaction built successfully!');
-    }
-    
-  } catch (error) {
-    console.error('❌ Example failed:', error);
-  }
-}
 
 // WSOL mint address constant (So11111111111111111111111111111111111111112)
 const WSOL_MINT_ADDRESS = address('So11111111111111111111111111111111111111112');
@@ -300,30 +302,42 @@ export async function generateWSOLATAForKeypairsV2(
   try {
     console.log(`🏦 Generating WSOL ATA instructions (V2) for up to ${maxKeypairs} keypairs...`);
     
-    const instructions: any[] = []; // Using any[] for V1/V2 compatibility
+    // ⚠️ TEMPORARY: Using legacy SPL Token for instruction building until full V2 migration
+    // This ensures compatibility with legacy transaction building in buildTxnV2
+    const spl = await import('@solana/spl-token');
+    const { PublicKey } = await import('@solana/web3.js');
+    
+    const instructions: TransactionInstruction[] = [];
     
     // Step 1: Create WSOL ATA for payer (if requested)
     if (includePayer) {
       console.log('📋 Creating WSOL ATA for payer...');
       
-      // Find the ATA address for payer
-      const [payerWSOLATA] = await findAssociatedTokenPda({
-        mint: WSOL_MINT_ADDRESS,
-        owner: config.payer.address,
-        tokenProgram: TOKEN_PROGRAM_ADDRESS,
-      });
-      
-      // Create the instruction using V2 patterns
-      const createPayerWSOLATA = getCreateAssociatedTokenIdempotentInstruction({
-        payer: config.payer,
-        ata: payerWSOLATA,
-        owner: config.payer.address,
-        mint: WSOL_MINT_ADDRESS,
-        tokenProgram: TOKEN_PROGRAM_ADDRESS,
-      });
-      
-      instructions.push(createPayerWSOLATA);
-      console.log(`✅ Payer WSOL ATA instruction created: ${payerWSOLATA}`);
+      try {
+        // Convert V2 address to legacy PublicKey for compatibility
+        const payerPublicKey = new PublicKey(config.payer.address);
+        
+        // Find the ATA address using legacy method
+        const wsolataAddressPayer = await spl.getAssociatedTokenAddress(
+          spl.NATIVE_MINT, // WSOL mint
+          payerPublicKey,  // Owner
+        );
+        
+        // Create instruction using legacy method for compatibility
+        const createWSOLAtaPayer = spl.createAssociatedTokenAccountIdempotentInstruction(
+          payerPublicKey,      // Payer
+          wsolataAddressPayer, // ATA address
+          payerPublicKey,      // Owner
+          spl.NATIVE_MINT      // WSOL mint
+        );
+        
+        instructions.push(createWSOLAtaPayer);
+        console.log(`✅ Payer WSOL ATA instruction created: ${wsolataAddressPayer.toString()}`);
+        
+      } catch (error) {
+        console.error('❌ Error creating payer WSOL ATA:', error);
+        throw error;
+      }
     }
     
     // Step 2: Load keypairs using V2 method
@@ -344,24 +358,26 @@ export async function generateWSOLATAForKeypairsV2(
       const keypair = keypairs[i];
       
       try {
-        // Find the ATA address for this keypair
-        const [wsolATA] = await findAssociatedTokenPda({
-          mint: WSOL_MINT_ADDRESS,
-          owner: keypair.address,
-          tokenProgram: TOKEN_PROGRAM_ADDRESS,
-        });
+        // Convert V2 keypair address to legacy PublicKey
+        const keypairPublicKey = new PublicKey(keypair.address);
+        const payerPublicKey = new PublicKey(config.payer.address);
         
-        // Create the instruction using V2 patterns
-        const createWSOLATA = getCreateAssociatedTokenIdempotentInstruction({
-          payer: config.payer, // Payer pays for the ATA creation
-          ata: wsolATA,
-          owner: keypair.address, // Keypair owns the ATA
-          mint: WSOL_MINT_ADDRESS,
-          tokenProgram: TOKEN_PROGRAM_ADDRESS,
-        });
+        // Find the ATA address using legacy method
+        const wsolATA = await spl.getAssociatedTokenAddress(
+          spl.NATIVE_MINT, // WSOL mint
+          keypairPublicKey, // Owner (keypair)
+        );
+        
+        // Create instruction using legacy method for compatibility
+        const createWSOLATA = spl.createAssociatedTokenAccountIdempotentInstruction(
+          payerPublicKey,   // Payer (pays for the ATA creation)
+          wsolATA,          // ATA address
+          keypairPublicKey, // Owner (keypair owns the ATA)
+          spl.NATIVE_MINT   // WSOL mint
+        );
         
         instructions.push(createWSOLATA);
-        console.log(`✅ WSOL ATA instruction ${i + 1}/${actualLimit}: ${keypair.address} -> ${wsolATA}`);
+        console.log(`✅ WSOL ATA instruction ${i + 1}/${actualLimit}: ${keypair.address} -> ${wsolATA.toString()}`);
         
       } catch (error) {
         console.error(`❌ Error creating WSOL ATA for keypair ${i + 1}: ${error}`);
@@ -616,38 +632,45 @@ async function createLUTTransactionV2(
   lutAddress: string;
 }> {
   try {
-    console.log('🔨 Building LUT creation transaction...');
+    console.log('🔨 Building LUT creation transaction (V2 Native)...');
     
-    // Get current slot for LUT creation
+    // Get current slot for LUT creation using V2 RPC
     const currentSlot = await config.rpc.getSlot().send();
     console.log(`📋 Using slot: ${currentSlot}`);
     
-    // ⚠️ TEMPORARY: Using legacy AddressLookupTableProgram until V2 migration
-    // TODO: Replace with @solana-program/address-lookup-table
-    const { AddressLookupTableProgram } = await import('@solana/web3.js');
-    const { PublicKey } = await import('@solana/web3.js');
+    // ✅ V2 MIGRATION: Using @solana-program/address-lookup-table instead of legacy Web3.js
+    console.log('🎯 Using V2 address-lookup-table instructions...');
     
-    // Create LUT instruction using legacy method (for now)
-    const [createLUTInstruction, lutAddress] = AddressLookupTableProgram.createLookupTable({
-      authority: new PublicKey(config.payer.address),
-      payer: new PublicKey(config.payer.address),
-      recentSlot: currentSlot,
+    // Convert slot to number for V2 API compatibility
+    const slotNumber = Number(currentSlot);
+    
+    // Create LUT instruction using V2 async method (which derives the address for us)
+    const createLUTInstruction = await getCreateLookupTableInstructionAsync({
+      payer: config.payer,
+      authority: config.payer,
+      recentSlot: slotNumber,
     });
     
-    console.log(`📍 LUT will be created at: ${lutAddress.toString()}`);
+    // Get the LUT address from the instruction
+    const lutAddressFromInstruction = createLUTInstruction.accounts[0].address;
+    console.log(`📍 LUT will be created at: ${lutAddressFromInstruction}`);
+    
+    // ⚠️ TEMPORARY: Still using legacy transaction building for compatibility
+    // TODO: Migrate to pure V2 transaction building in next phase
+    const legacyInstructions = [convertV2InstructionToLegacy(createLUTInstruction)];
     
     // Build transaction using V2 buildTxnV2
-    const transaction = await buildTxnV2(config, [createLUTInstruction]);
+    const transaction = await buildTxnV2(config, legacyInstructions);
     
-    console.log('✅ LUT creation transaction built successfully');
+    console.log('✅ LUT creation transaction built successfully with V2 instructions');
     
     return {
       transaction,
-      lutAddress: lutAddress.toString(),
+      lutAddress: lutAddressFromInstruction,
     };
     
   } catch (error) {
-    console.error('❌ Error creating LUT transaction:', error);
+    console.error('❌ Error creating LUT transaction (V2):', error);
     throw error;
   }
 }
@@ -696,4 +719,173 @@ async function saveLUTAddressV2(
     console.error('❌ Error saving LUT address:', error);
     throw error;
   }
+}
+
+/**
+ * Derive LUT address from payer and slot (V2 Implementation)
+ * 
+ * @param payerAddress - Payer address
+ * @param slot - Recent slot number
+ * @returns Promise<string> - Calculated LUT address
+ */
+async function deriveLUTAddressV2(payerAddress: Address, slot: number): Promise<string> {
+  try {
+    // ⚠️ TEMPORARY: Using legacy method to derive LUT address
+    // TODO: Implement pure V2 address derivation when available
+    const { PublicKey } = await import('@solana/web3.js');
+    const { AddressLookupTableProgram } = await import('@solana/web3.js');
+    
+    const [, lutAddress] = AddressLookupTableProgram.createLookupTable({
+      authority: new PublicKey(payerAddress),
+      payer: new PublicKey(payerAddress),
+      recentSlot: slot,
+    });
+    
+    return lutAddress.toString();
+    
+  } catch (error) {
+    console.error('❌ Error deriving LUT address:', error);
+    throw error;
+  }
+}
+
+/**
+ * Convert V2 instruction to legacy format (Temporary Utility)
+ * 
+ * @param v2Instruction - V2 instruction from @solana-program packages
+ * @returns TransactionInstruction - Legacy format instruction
+ */
+function convertV2InstructionToLegacy(v2Instruction: any): any {
+  try {
+    // ⚠️ TEMPORARY: Convert V2 instruction format to legacy Web3.js format
+    // This is needed until we fully migrate to V2 transaction building
+    const { TransactionInstruction, PublicKey } = require('@solana/web3.js');
+    
+    // Convert V2 address format to legacy PublicKey format
+    const keys = v2Instruction.accounts.map((account: any) => ({
+      pubkey: new PublicKey(account.address),
+      isSigner: account.role === 'signer' || account.role === 'signerAndWritable',
+      isWritable: account.role === 'writable' || account.role === 'signerAndWritable',
+    }));
+    
+    return new TransactionInstruction({
+      keys,
+      programId: new PublicKey(v2Instruction.programAddress),
+      data: Buffer.from(v2Instruction.data),
+    });
+    
+  } catch (error) {
+    console.error('❌ Error converting V2 instruction to legacy format:', error);
+    throw error;
+  }
+}
+
+/**
+ * Extend LUT with addresses (V2 Implementation)
+ * 
+ * This replaces the legacy extendLUT() function with V2 patterns:
+ * - Uses V2 address-lookup-table instructions
+ * - Proper chunking and batching
+ * - Structured return values instead of side effects
+ * - Configurable parameters with sensible defaults
+ * 
+ * @param config - AppConfigV2 instance
+ * @param lutAddress - LUT address to extend
+ * @param addresses - Array of addresses to add to LUT
+ * @param jitoTipAmount - Jito tip amount in SOL (default: 0)
+ * @param chunkSize - Number of addresses per transaction (default: 30)
+ * @returns Promise<VersionedTransaction[]> - Array of extension transactions
+ */
+export async function extendLUTV2(
+  config: AppConfigV2,
+  lutAddress: string,
+  addresses: string[],
+  jitoTipAmount: number = 0,
+  chunkSize: number = 30
+): Promise<VersionedTransaction[]> {
+  try {
+    console.log(`🔧 Extending LUT (V2) with ${addresses.length} addresses...`);
+    console.log(`📍 LUT Address: ${lutAddress}`);
+    console.log(`📊 Parameters: chunkSize=${chunkSize}, tip=${jitoTipAmount} SOL`);
+    
+    if (addresses.length === 0) {
+      console.log('⚠️ No addresses to add to LUT');
+      return [];
+    }
+    
+    // Convert string addresses to V2 Address format
+    const v2Addresses = addresses.map(addr => address(addr));
+    
+    // Chunk addresses to prevent transaction overflow
+    const addressChunks = chunkAddresses(v2Addresses, chunkSize);
+    console.log(`📦 Created ${addressChunks.length} chunks of addresses`);
+    
+    const transactions: any[] = [];
+    
+    // Create extend instructions for each chunk
+    for (let i = 0; i < addressChunks.length; i++) {
+      const chunk = addressChunks[i];
+      console.log(`🔄 Processing chunk ${i + 1}/${addressChunks.length} with ${chunk.length} addresses...`);
+      
+      try {
+        // ✅ V2 MIGRATION: Using @solana-program/address-lookup-table
+        const extendInstruction = getExtendLookupTableInstruction({
+          payer: config.payer,
+          authority: config.payer,
+          address: address(lutAddress), // V2 uses 'address' not 'lookupTable'
+          addresses: chunk,
+        });
+        
+        // Convert to legacy format (temporary)
+        const legacyExtendInstruction = convertV2InstructionToLegacy(extendInstruction);
+        
+        // Add Jito tip to the last chunk
+        const instructions = [legacyExtendInstruction];
+        if (i === addressChunks.length - 1 && jitoTipAmount > 0) {
+          console.log(`💰 Adding Jito tip of ${jitoTipAmount} SOL to final chunk...`);
+          
+          const { SystemProgram, PublicKey } = await import('@solana/web3.js');
+          const tipInstruction = SystemProgram.transfer({
+            fromPubkey: new PublicKey(config.payer.address),
+            toPubkey: new PublicKey(config.getRandomTipAccount()),
+            lamports: Math.floor(jitoTipAmount * 1e9),
+          });
+          
+          instructions.push(tipInstruction);
+        }
+        
+        // Build transaction
+        const transaction = await buildTxnV2(config, instructions);
+        transactions.push(transaction);
+        
+        console.log(`✅ Chunk ${i + 1} transaction built successfully`);
+        
+      } catch (error) {
+        console.error(`❌ Error processing chunk ${i + 1}:`, error);
+        throw error;
+      }
+    }
+    
+    console.log(`🎉 Extended LUT with ${addressChunks.length} transactions successfully!`);
+    return transactions;
+    
+  } catch (error) {
+    console.error('❌ Error extending LUT (V2):', error);
+    throw error;
+  }
+}
+
+/**
+ * Utility function to chunk addresses into groups
+ * 
+ * @param addresses - Array of addresses to chunk
+ * @param chunkSize - Size of each chunk
+ * @returns Address[][] - Array of address chunks
+ */
+function chunkAddresses(addresses: Address[], chunkSize: number): Address[][] {
+  const chunks: Address[][] = [];
+  for (let i = 0; i < addresses.length; i += chunkSize) {
+    chunks.push(addresses.slice(i, i + chunkSize));
+  }
+  return chunks;
 }

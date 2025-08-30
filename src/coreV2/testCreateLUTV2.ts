@@ -8,31 +8,13 @@ import {
   buildTxnV2, 
   validateTxnV2, 
   debugTxnV2, 
-  exampleBuildTxnV2Usage,
   generateWSOLATAForKeypairsV2,
   chunkWSOLATAInstructionsV2,
   buildWSOLATATransactionsV2,
-  createLUTV2
+  createLUTV2,
+  extendLUTV2
 } from './createLUTV2';
 
-async function testBuildTxnV2() {
-  console.log('🧪 Testing buildTxnV2 functionality...');
-  
-  try {
-    // Initialize V2 configuration
-    const config = await AppConfigV2.create();
-    console.log('✅ AppConfigV2 created successfully');
-    
-    // Run example usage
-    await exampleBuildTxnV2Usage(config);
-    
-    console.log('🎉 buildTxnV2 test completed successfully!');
-    
-  } catch (error) {
-    console.error('❌ Test failed:', error);
-    process.exit(1);
-  }
-}
 
 async function testWSOLATAFunctionsV2() {
   console.log('🧪 Testing WSOL ATA V2 functions...');
@@ -105,14 +87,59 @@ async function testCreateLUTV2() {
   }
 }
 
+async function testExtendLUTV2() {
+  console.log('🧪 Testing extendLUTV2 functionality...');
+  
+  try {
+    // Initialize V2 configuration
+    const config = await AppConfigV2.create();
+    console.log('✅ AppConfigV2 created successfully');
+    
+    // Create a mock LUT address for testing (using a valid Solana address)
+    const mockLUTAddress = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+    
+    // Create some test addresses to extend with (using valid Solana addresses)
+    const testAddresses = [
+      'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',  // Associated token program
+      'SysvarRent111111111111111111111111111111111',    // Rent sysvar
+      'SysvarC1ock11111111111111111111111111111111',    // Clock sysvar
+    ];
+    
+    console.log('🔄 Testing LUT extension with mock data...');
+    const transactions = await extendLUTV2(
+      config,
+      mockLUTAddress,
+      testAddresses,
+      0,   // No tip for testing
+      2    // Small chunk size for testing
+    );
+    
+    console.log(`✅ ExtendLUT V2 successful!`);
+    console.log(`📦 Generated ${transactions.length} extension transactions`);
+    
+    // Validate all transactions
+    let validCount = 0;
+    for (let i = 0; i < transactions.length; i++) {
+      const tx = transactions[i];
+      if (validateTxnV2(tx, config)) {
+        validCount++;
+      }
+      debugTxnV2(tx, `Extension Transaction ${i + 1}`);
+    }
+    
+    console.log(`✅ Transaction validation: ${validCount}/${transactions.length} valid`);
+    console.log('🎉 ExtendLUT V2 test completed successfully!');
+    
+  } catch (error) {
+    console.error('❌ ExtendLUT V2 test failed:', error);
+    process.exit(1);
+  }
+}
+
 // Run test if this file is executed directly
 if (require.main === module) {
   (async () => {
     try {
-      // Run basic buildTxnV2 test
-      await testBuildTxnV2();
-      
-      console.log('\n' + '='.repeat(50) + '\n');
       
       // Run WSOL ATA functions test
       await testWSOLATAFunctionsV2();
@@ -122,6 +149,11 @@ if (require.main === module) {
       // Run CreateLUT V2 test
       await testCreateLUTV2();
       
+      console.log('\n' + '='.repeat(50) + '\n');
+      
+      // Run ExtendLUT V2 test
+      await testExtendLUTV2();
+      
       console.log('\n🎊 All tests completed successfully!');
     } catch (error) {
       console.error('💥 Test suite failed:', error);
@@ -130,4 +162,4 @@ if (require.main === module) {
   })().catch(console.error);
 }
 
-export { testBuildTxnV2, testWSOLATAFunctionsV2, testCreateLUTV2 };
+export { testWSOLATAFunctionsV2, testCreateLUTV2, testExtendLUTV2 };
