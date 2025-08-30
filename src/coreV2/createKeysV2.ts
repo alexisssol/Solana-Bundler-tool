@@ -12,8 +12,9 @@ import { SecureKeypairManagerV2 } from '../config/SecureKeypairManagerV2';
 
 const prompt = promptSync();
 
-const keypairsDir = path.join(__dirname, '../../', 'keypairs');
-const keyInfoPath = path.join(__dirname, '../../', 'keypairs/keyInfoV2.json');
+// From src/coreV2/, go up one level to src/, then to keypairs/
+const keypairsDir = path.join(__dirname, '../', 'keypairs');
+const keyInfoPath = path.join(__dirname, '../', 'keypairs/keyInfoV2.json');
 
 interface IPoolInfoV2 {
   [key: string]: any;

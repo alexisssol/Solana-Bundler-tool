@@ -1,34 +1,9 @@
 /**
  * createLUTV2.ts - Solana Kit V2 Migration for LUT Operations
- * 
- * This file implements V2 transaction building patterns as the first step
- * in migrating createLUT.ts to Solana Kit V2.
- * 
- * ✅ COMPLETED:
- * - buildTxnV2(): V2 transaction building with legacy compatibility
- * - buildSimpleTxnV2(): Simplified V2 transaction building  
- * 
- * 🔧 CURRENT APPROACH:
- * - Uses V2 RPC (config.rpc) for blockhash fetching
- * - Hybrid transaction building (V2 RPC + legacy TransactionMessage)
- * - Maintains compatibility with existing VersionedTransaction bundle system
- * - Incremental migration strategy - can be used alongside existing V1 code
- * 
+
  * 🚧 TODO (Next Steps):
- * - createLUTV2(): Main LUT creation function
- * - extendLUTV2(): LUT extension functionality
- * - Full V2 instruction support (currently uses legacy compatibility)
  * - V2 keypair signing integration
  * - Address Lookup Table program V2 operations
- * 
- * 📋 MIGRATION PROGRESS:
- * Phase 1: ✅ Basic V2 transaction building (COMPLETED)
- * Phase 2: 🚧 LUT creation functions (TODO)
- * Phase 3: 🚧 Full V2 instruction support (TODO)
- * Phase 4: 🚧 Complete Web3.js removal (TODO)
- * 
- * @author V2 Migration
- * @version 0.1.0 - Basic buildTxnV2 implementation
  */
 
 import {
