@@ -25,7 +25,7 @@ import fs from "fs";
 import { PublicKey, VersionedTransaction, TransactionInstruction, TransactionMessage as LegacyTransactionMessage, SystemProgram, Keypair, LAMPORTS_PER_SOL, AddressLookupTableAccount } from "@solana/web3.js";
 
 const prompt = promptSync();
-const keyInfoPath = path.join(__dirname, "../../", "keyInfoV2.json");
+const keyInfoPath = path.join(__dirname, "../../", "/keypairs/keyInfoV2.json");
 
 type LiquidityPairTargetInfoV2 = {
 	baseToken: Token;
@@ -60,7 +60,10 @@ export async function buyBundleV2() {
 	if (fs.existsSync(keyInfoPath)) {
 		const data = fs.readFileSync(keyInfoPath, "utf-8");
 		poolInfo = JSON.parse(data);
+	} else {
+		console.log("No key info Path found in path: ", keyInfoPath);
 	}
+	console.log(`Pool Info: ${JSON.stringify(poolInfo, null, 2)}`);
 
 	const lut = address(poolInfo.addressLUT?.toString() || '');
 
