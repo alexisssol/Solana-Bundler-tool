@@ -17,9 +17,7 @@
 		"test:unit": "jest tests/unit",
 		"test:integration": "jest tests/integration",
 		"test:watch": "jest --watch",
-		"test:coverage": "jest --coverage",
-		"test:createLUTV2": "ts-node src/coreV2/testCreateLUTV2.ts",
-		"benchmark": "node tests/performance/*.benchmark.js"
+		"test:createLUTV2": "ts-node src/coreV2/testCreateLUTV2.ts"
 	},
 	"author": "https://t.me/benorizz0/",
 	"license": "ISC",
