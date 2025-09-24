@@ -52,4 +52,4 @@ The Solana Raydium Bundler offers a sophisticated solution for handling multiple
 
 Start optimizing your Solana transactions with the Solana Raydium Bundler today!
 
-For technical queries, feel free to reach out via tg @ilertha.
+For technical queries, feel free to reach out via tg @alexisssol.
