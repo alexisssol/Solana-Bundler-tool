@@ -1,55 +1,41 @@
-# Solana-Bundler-tool
- The Solana Bundler is a powerful open-source script designed to simplify buying and selling operations across 27 wallets simultaneously on the Solana blockchain. This innovative tool streamlines multi-transaction management, delivering efficiency and reliability for users handling high-volume activities
+<!--
+  The animation below is hosted on froglabs.io — nothing to upload or commit.
+  It renders and autoplays on GitHub automatically.
+-->
 
-## Initial Setup
+<div align="center">
 
-To utilize the Solana Raydium Bundler efficiently, please adhere to the following setup and execution guidelines.
- 
-### Step 1: Configuration
+# FrogLabs Solana Bundler — The only self-custodial bundler
 
-- **Edit the `.env` File:** Before executing the script, configuring the `.env` file is essential. You will need two keypairs:
+**[FrogLabs](https://froglabs.io/solana-bundler?utm_source=github&utm_medium=readme&utm_campaign=bundler)** — a serverless, self-custodial desktop bundler for Solana.
+Trade. Launch. Snipe. Your keys never leave your machine.
 
-  - **SOL Distribution Fees Keypair:** This keypair handles the payment of all SOL distribution fees.
-  - **Pool Creation Keypair:** This keypair facilitates pool creation. For security, ensure these keypairs are distinct.
+![FrogLabs Terminal launching a bundled token](https://froglabs.io/promo/froglabs-launch.gif)
 
-  While testing the script, you can employ the same keypair for both purposes. Always store these keypairs securely. 
+[**Download**](https://froglabs.io/download?utm_source=github&utm_medium=readme&utm_campaign=bundler) · [**Docs**](https://froglabs.io/docs?utm_source=github&utm_medium=readme&utm_campaign=bundler) · [**Discord**](https://discord.gg/sZ8tD8VyuF)
 
-### Step 2: Execution of Functions
- 
-**Note:** To maintain error-free execution, it is vital to perform these steps sequentially. 
+</div>
 
-- **Create Keypairs (Step 1):** Even though not mandatory for every launch, it is advisable to create new keypairs initially or during resets to assure no SOL remains in the wallets.
+---
 
-- **Premarket (Step 2):** This multi-step process must follow a specific sequence:
+## Why self-custody matters
 
-  1. **Execution Sequence:** Complete steps 2 through 6 sequentially.
-  2. **Bundle ID Validation:** After each step, confirm the Bundle ID to ensure successful landing.
-  3. **Repeat if Necessary:** If landing fails, elevate the tip and attempt again. Exit if required.
-  4. **Cross-Verification:** Utilize the Jito Block Explorer to verify bundle landing. Disregard the "Landed - no" indication; ensure the first transaction is confirmed.
+Most bundlers are websites or Telegram bots. To bundle, you paste private keys into someone else's server — and from that moment your funds depend on their security, their honesty, and their uptime.
 
-- **Create Pool (Step 3):** Pool creation may warrant multiple attempts:
+FrogLabs takes the opposite approach: it's a desktop app. Wallets are generated and stored locally, transactions are signed locally, and there is no FrogLabs cloud holding your keys, your funds, or your strategy.
 
-  - Use function spamming if initial attempts fail to land the pool creation.
-  - Enhance the tip, with 0.1 SOL or higher recommended for improved landing chances.
+**Don't trust — verify.** Watch the traffic with a proxy, run it offline, check what leaves your machine. The [docs](https://froglabs.io/docs?utm_source=github&utm_medium=readme&utm_campaign=bundler) cover the architecture and model in detail.
 
-- **Selling Options (Steps 4 and 5):**
+## What it does
 
-  1. **Simultaneous Keypair Sale (Step 4):** Consolidate the sale of all keypairs and reclaim WSOL in Premarket's Step 7 post-rugging.
-  2. **Percentage-Based Selling (Step 5):** Execute sales of varying percentages upon request by transferring specific portions of each keypair's token balance to the fee payers before executing a singular bundle sale.
+- **Bundled launches** — deploy and buy from dozens of sub-wallets in the same block, on every major launchpad: Pump.fun, Raydium LaunchLab, Bonk, Bags, Meteora DBC
+- **Wallet management** — fund, rotate, and consolidate sub-wallets in one click; keys stay on your machine
+- **Fast execution** — direct-to-leader routing with adaptive priority fees
+- **Blueprints** — save any launch/volume/sell flow and replay it on the next coin in two clicks
+- **Live PnL** — per-wallet, fee-aware, realized vs. unrealized
 
-- **Liquidity Pool Removal (Step 6):** The process for removing LP is direct:
-  - **Non-Burn Removal:** Without LP burning, it will automatically be removed.
+Questions? The team is active in [Discord](https://discord.gg/sZ8tD8VyuF).
 
-## Tips and Troubleshooting
+---
 
-- **Bundle Success:** Adapt the tip or retry the operation if the bundle doesn't land. Jito Block Explorer serves as a verification tool.
-- **Keypair Security:** Ensure keypairs are secure and correctly entered in the `.env` file.
-- **Prudent Function Spamming:** Monitor transactions vigilantly to prevent unnecessary SOL expenditure during spam attempts.
-
-### Final Thoughts
-
-The Solana Raydium Bundler offers a sophisticated solution for handling multiple transactions on the Solana blockchain. Adhering to the outlined setup and functions will enable smooth buying and selling processes. Engage with our Discord community to explore the strengths of this open-source tool further.
-
-Start optimizing your Solana transactions with the Solana Raydium Bundler today!
-
-For technical queries, feel free to reach out via tg @alexisssol.
+<sub>Looking for a more extensive solution? Check out our friends at [FrogLabs](https://froglabs.io/solana-bundler?utm_source=github&utm_medium=readme&utm_campaign=bundler) — and let them know **alexissol** sent you. Nothing here is financial advice — trading memecoins is high-risk. Do your own research.</sub>
